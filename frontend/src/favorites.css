@@ -1,0 +1,21 @@
+.library-navigation { display: flex; flex-direction: column; gap: 7px; }
+.sidebar .nav-item { width: 100%; text-align: left; background: transparent; border: 1px solid transparent; color: #a4b2a8; font-size: 12px; }
+.sidebar .nav-item:hover { color: var(--mint); background: #202b24; }
+.sidebar .nav-item.active { background: #29362e; color: var(--mint); border-color: #3b4c40; }
+.nav-item svg { flex-shrink: 0; }
+.favorite-count { margin-left: auto; font-size: 10px; color: #8fa696; font-variant-numeric: tabular-nums; }
+.favorite-button { display: grid; place-items: center; width: 34px; height: 36px; padding: 7px; flex-shrink: 0; border-radius: 6px; color: #839b8d; }
+.favorite-button:hover:not(:disabled) { background: #2c3b31; color: var(--mint); }
+.favorite-button.is-favorite { color: var(--mint); }
+.favorite-button[aria-busy="true"] { opacity: .45; }
+.track-list .favorite-button { margin-left: 2px; }
+.player-bar .now-playing { gap: 12px; }
+.now-playing-copy { flex: 1; min-width: 0; }
+.favorites-empty .search-reset { margin-top: 22px; padding: 10px 16px; border: 1px solid #506757; border-radius: 5px; color: var(--mint); font-size: 12px; }
+.favorite-error { font-size: 12px; line-height: 1.8; margin-top: 15px; }
+.favorite-error button { color: var(--mint); text-decoration: underline; }
+@media (max-width: 700px) {
+  .library-navigation { flex-direction: row; gap: 4px; }
+  .sidebar .nav-item { width: auto; font-size: 10px; padding: 10px 8px; gap: 6px; }
+  .favorite-count { display: none; }
+}

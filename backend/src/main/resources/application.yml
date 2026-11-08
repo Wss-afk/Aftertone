@@ -1,0 +1,36 @@
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    # Consume rejected multipart bodies so clients can receive the JSON 413 response.
+    max-swallow-size: -1
+spring:
+  application:
+    name: night-signal
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/night_signal?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    username: ${SPRING_DATASOURCE_USERNAME:night_signal_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 26MB
+app:
+  music-dir: ${APP_MUSIC_DIR:../data/music}
+  storage:
+    minimum-free-space: ${APP_STORAGE_MIN_FREE_SPACE:5GB}
+  audio:
+    ffmpeg-path: ${APP_FFMPEG_PATH:ffmpeg}
+    ffprobe-path: ${APP_FFPROBE_PATH:ffprobe}
+    timeout-seconds: ${APP_AUDIO_TIMEOUT_SECONDS:120}
+    max-output-bytes: ${APP_AUDIO_MAX_OUTPUT_BYTES:104857600}

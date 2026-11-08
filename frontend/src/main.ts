@@ -1,0 +1,9 @@
+import { createApp } from 'vue'
+import App from './App.vue'
+import './style.css'
+import './player.css'
+import './metadata.css'
+import './favorites.css'
+import './playlists.css'
+
+createApp(App).mount('#app')
