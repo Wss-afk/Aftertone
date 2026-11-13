@@ -618,9 +618,13 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
-          <span class="player-artist">{{ current ? (current.artist || '未知歌手') : '从曲库选择一首歌' }}</span>
-          <span v-if="current" class="player-album" :title="current.album || '未知专辑'">{{ current.album || '未知专辑' }}</span>
-          <span v-if="current" class="player-state">{{ buffering ? '正在加载…' : playing ? '正在播放 · 本机曲库' : '已暂停 · 本机曲库' }}</span>
+          <div v-if="current" class="player-details">
+            <span class="player-artist" :title="current.artist || '未知歌手'">{{ current.artist || '未知歌手' }}</span>
+            <span class="player-detail-separator" aria-hidden="true">·</span>
+            <span class="player-album" :title="current.album || '未知专辑'">{{ current.album || '未知专辑' }}</span>
+          </div>
+          <span v-else class="player-artist">从曲库选择一首歌</span>
+          <span v-if="current" class="player-state" :class="{ 'visually-hidden': !buffering }" role="status">{{ buffering ? '正在加载…' : playing ? '正在播放' : '已暂停' }}</span>
         </div>
       </div>
       <PlayerControls :track-id="current?.id" :playing="playing" :time="playbackTime" :duration="duration" :can-previous="canPrevious" :can-next="canNext" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo" />
