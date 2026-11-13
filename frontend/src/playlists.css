@@ -24,7 +24,6 @@
 .playlist-view-actions .playlist-delete { color: var(--danger); }
 .playlist-delete-confirm { background: var(--danger-fill); color: var(--on-danger); }
 .library-heading > div:first-child { min-width: 0; overflow-wrap: anywhere; }
-.library-count { flex-shrink: 0; }
 .playlist-dialog select {
   width: 100%;
   padding: 10px 12px;
@@ -37,7 +36,6 @@
 .playlist-dialog select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @media (max-width: 700px) {
-  .sidebar { flex-wrap: wrap; }
   .playlist-navigation { flex-basis: 100%; margin: 12px 0 0; padding-top: 8px; }
   .playlist-navigation nav { display: flex; overflow-x: auto; }
   .sidebar .playlist-nav-item { flex-shrink: 0; max-width: 180px; }

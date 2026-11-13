@@ -539,7 +539,6 @@ onBeforeUnmount(() => {
         <span class="brand-mark" aria-hidden="true">◒</span>
         <span lang="en"><span class="brand-name">{{ appName }}</span><small>LOCAL MUSIC</small></span>
       </a>
-      <p class="nav-caption">你的音乐空间</p>
       <nav class="library-navigation" aria-label="音乐导航">
         <button class="nav-item" :class="{ active: view === 'library' }" :aria-current="view === 'library' ? 'page' : undefined" @click="changeView('library')"><span aria-hidden="true">▤</span> 我的曲库 <span class="nav-dot" v-if="view === 'library'"></span></button>
         <button class="nav-item" :class="{ active: view === 'favorites' }" :aria-current="view === 'favorites' ? 'page' : undefined" @click="changeView('favorites')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.7 4.9a5.3 5.3 0 0 0-7.5 0L12 6.1l-1.2-1.2a5.3 5.3 0 0 0-7.5 7.5L12 21l8.7-8.6a5.3 5.3 0 0 0 0-7.5Z" /></svg> 我喜欢的音乐 <span class="favorite-count" aria-hidden="true">{{ favoriteTracks.length }}</span></button>
@@ -561,23 +560,15 @@ onBeforeUnmount(() => {
     </aside>
 
     <main>
-      <header class="topbar"><span>私人声音档案</span><div class="topbar-actions"><ThemeSelect /><span class="edition" lang="en">{{ appName }} / 01</span></div></header>
       <section class="library" aria-labelledby="library-title">
-        <div class="eyebrow">YOUR OWN FREQUENCY</div>
-        <div class="library-heading">
-          <div><h1 id="library-title">{{ viewTitle }}<span>.</span></h1><p>{{ view === 'favorites' ? '把喜欢的旋律，留在身边。' : selectedPlaylist ? '收在一起，按顺序听。' : '夜色渐深，音乐刚好。' }}</p></div>
-          <div class="library-count"><strong>{{ viewTracks.length }}</strong><span>{{ view === 'favorites' ? '首喜欢的音乐' : selectedPlaylist ? '首歌曲' : '首声音收藏' }}</span></div>
-        </div>
-        <StorageStatusPanel v-if="view === 'library'" :capacity="capacity" :loading="capacityLoading" :error="capacityError" @refresh="refreshCapacity" />
-        <UploadPanel v-show="view === 'library'" :blocked="capacity?.uploadAllowed === false" @uploaded="refresh" @storage-change="refreshCapacity" />
-        <div class="list-heading">
-          <h2>{{ searching ? '搜索结果' : view === 'favorites' ? '已收藏' : selectedPlaylist ? '歌单曲目' : '最近上传' }} <span>{{ visibleTracks.length }}</span></h2>
-          <div class="playlist-view-actions">
-            <button v-if="selectedPlaylist" type="button" class="text-button" :disabled="playlistBusy" @click="openPlaylistPrompt({ kind: 'rename', playlist: selectedPlaylist })">修改歌单名称</button>
-            <button v-if="selectedPlaylist" type="button" class="text-button playlist-delete" :disabled="playlistBusy" aria-haspopup="dialog" @click="openPlaylistPrompt({ kind: 'delete', playlist: selectedPlaylist })">删除歌单</button>
-            <button class="text-button" @click="refreshVisible" :disabled="loading">{{ loading ? '加载中…' : '刷新曲库 ↻' }}</button>
+        <header class="library-heading">
+          <div class="library-title-group">
+            <h1 id="library-title">{{ viewTitle }}</h1>
+            <div class="library-count"><strong>{{ viewTracks.length }}</strong><span>{{ view === 'favorites' ? '首收藏' : '首歌曲' }}</span></div>
           </div>
-        </div>
+          <ThemeSelect />
+        </header>
+        <UploadPanel v-show="view === 'library'" :blocked="capacity?.uploadAllowed === false" @uploaded="refresh" @storage-change="refreshCapacity" />
         <form class="library-search" role="search" aria-label="曲库搜索" @submit.prevent>
           <label class="visually-hidden" for="track-search">搜索歌名或歌手</label>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
@@ -586,7 +577,15 @@ onBeforeUnmount(() => {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
         </form>
-        <p id="search-summary" class="search-summary" role="status">{{ listError ? '曲库读取失败，请重试。' : loading && !tracks.length ? '正在读取曲库…' : searching ? `找到 ${visibleTracks.length} 首，共 ${viewTracks.length} 首` : view === 'favorites' ? `已收藏 ${favoriteTracks.length} 首歌曲` : `共 ${viewTracks.length} 首歌曲` }}</p>
+        <p id="search-summary" class="search-summary" :class="{ 'visually-hidden': !searching && !listError && (!loading || tracks.length > 0) }" role="status">{{ listError ? '曲库读取失败，请重试。' : loading && !tracks.length ? '正在读取曲库…' : searching ? `找到 ${visibleTracks.length} 首，共 ${viewTracks.length} 首` : view === 'favorites' ? `已收藏 ${favoriteTracks.length} 首歌曲` : `共 ${viewTracks.length} 首歌曲` }}</p>
+        <div class="list-heading">
+          <h2>{{ searching ? '搜索结果' : view === 'favorites' ? '已收藏' : selectedPlaylist ? '歌单曲目' : '最近上传' }}</h2>
+          <div class="playlist-view-actions">
+            <button v-if="selectedPlaylist" type="button" class="text-button" :disabled="playlistBusy" @click="openPlaylistPrompt({ kind: 'rename', playlist: selectedPlaylist })">修改歌单名称</button>
+            <button v-if="selectedPlaylist" type="button" class="text-button playlist-delete" :disabled="playlistBusy" aria-haspopup="dialog" @click="openPlaylistPrompt({ kind: 'delete', playlist: selectedPlaylist })">删除歌单</button>
+            <button class="text-button" @click="refreshVisible" :disabled="loading">{{ loading ? '加载中…' : '刷新曲库 ↻' }}</button>
+          </div>
+        </div>
         <div id="track-results">
         <p v-if="listError" class="state error" role="alert">{{ listError }} <button @click="refresh">重试</button></p>
         <p v-else-if="loading && !tracks.length" class="state" role="status">正在连接你的曲库…</p>
@@ -601,6 +600,7 @@ onBeforeUnmount(() => {
         <p v-if="favoriteError" class="favorite-error error" role="alert">{{ favoriteError }} <button type="button" @click="refresh">刷新曲库</button></p>
         <p v-if="playlistError && !playlistPrompt" class="favorite-error error" role="alert">{{ playlistError }}</p>
         <p class="library-note">{{ libraryNote }}</p>
+        <StorageStatusPanel v-if="view === 'library'" :capacity="capacity" :loading="capacityLoading" :error="capacityError" @refresh="refreshCapacity" />
       </section>
     </main>
 

@@ -6,5 +6,6 @@ import './player.css'
 import './metadata.css'
 import './favorites.css'
 import './playlists.css'
+import './library-layout.css'
 
 createApp(App).mount('#app')

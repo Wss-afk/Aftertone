@@ -93,19 +93,20 @@ async function importFiles(batch: UploadItem[]) {
 </script>
 
 <template>
-  <form class="upload-panel" :class="{ 'upload-dragging': dragging }" @submit.prevent="importFiles(queued)"
+  <form class="upload-panel" :class="{ 'upload-dragging': dragging }" aria-label="音频导入" @submit.prevent="importFiles(queued)"
     @dragover.prevent="dragOver" @dragleave="dragLeave" @drop.prevent="drop" :aria-busy="uploading">
-    <div class="upload-icon" aria-hidden="true">＋</div>
-    <div class="upload-copy">
-      <strong>把喜欢的声音，留在这里。</strong>
-      <span>可多选或拖入音频 · MP3、M4A、WAV、FLAC 等 · 每首最大 25 MB</span>
+    <div class="upload-toolbar">
+      <p id="upload-help" class="upload-help">多选或拖入音频 · 每首最大 25 MB</p>
+      <div class="upload-actions">
+        <label class="file-picker" :class="{ disabled: uploading }">
+          选择音频
+          <input type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus,.wma,.aif,.aiff,.webm,.weba,.mp4"
+            multiple :disabled="uploading" @change="choose" aria-label="选择音频文件" aria-describedby="upload-help" />
+        </label>
+        <button class="primary" type="submit" :disabled="!queued.length || uploading || blocked">{{ uploading ? '正在处理…' : '上传歌曲' }}</button>
+      </div>
     </div>
-    <label class="file-picker" :class="{ disabled: uploading }">
-      选择音频
-      <input type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus,.wma,.aif,.aiff,.webm,.weba,.mp4"
-        multiple :disabled="uploading" @change="choose" aria-label="选择音频文件" />
-    </label>
-    <button class="primary" type="submit" :disabled="!queued.length || uploading || blocked">{{ uploading ? '正在处理…' : '上传歌曲' }}</button>
+    <p v-if="blocked" class="upload-warning" role="status">磁盘空间不足，上传已暂停。可在列表下方刷新存储空间。</p>
     <div v-if="items.length" class="upload-queue">
       <div class="upload-queue-header">
         <p role="status">等待 {{ counts.queued }} · 处理中 {{ counts.processing }} · 成功 {{ counts.done }} · 重复 {{ counts.duplicate }} · 失败 {{ counts.failed }}</p>

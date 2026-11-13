@@ -57,7 +57,7 @@ it('loads persisted hearts and favorites with a count and selected navigation', 
   expect(wrapper.get('.favorite-count').text()).toBe('2')
   await favorites()
   expect(titles()).toEqual(['Cloud', '夜航'])
-  expect(wrapper.get('#library-title').text()).toBe('我喜欢的音乐.')
+  expect(wrapper.get('#library-title').text()).toBe('我喜欢的音乐')
   expect(wrapper.get('.library-navigation button:nth-child(2)').attributes('aria-current')).toBe('page')
   expect(wrapper.get('.upload-panel').isVisible()).toBe(false)
   expect(wrapper.get('#search-summary').text()).toBe('已收藏 2 首歌曲')

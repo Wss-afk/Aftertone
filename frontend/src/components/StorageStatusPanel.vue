@@ -26,10 +26,13 @@ function bytes(value: number) {
         <div><span>曲库音频占用</span><strong>{{ bytes(capacity.libraryBytes) }}</strong></div>
         <div><span>{{ volumeLabel }}</span><strong>{{ bytes(capacity.diskUsableBytes) }}</strong></div>
       </div>
-      <p class="storage-policy">为系统预留 {{ bytes(capacity.reserveBytes) }}，空间不足时暂停上传。</p>
       <p v-if="!capacity.uploadAllowed" class="storage-warning" role="alert">磁盘空间不足，上传已暂停。释放空间后，点击“刷新”重试。</p>
     </template>
     <p v-else class="storage-unavailable" role="status">正在读取磁盘容量…</p>
-    <p class="storage-note">音乐保存在本机，上传来源文件仍会另占空间。</p>
+    <details class="storage-details">
+      <summary>存储说明</summary>
+      <p v-if="capacity" class="storage-policy">为系统预留 {{ bytes(capacity.reserveBytes) }}，空间不足时暂停上传。</p>
+      <p class="storage-note">音乐保存在本机，上传来源文件仍会另占空间。</p>
+    </details>
   </section>
 </template>
