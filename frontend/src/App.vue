@@ -18,6 +18,8 @@ import { usePlaylists } from './composables/usePlaylists'
 import { forgetPlaybackPosition, readPlaybackPosition, writePlaybackPosition } from './utils/playbackPosition'
 import PlaybackQueuePanel from './components/PlaybackQueuePanel.vue'
 import ThemeSelect from './components/ThemeSelect.vue'
+import VolumeControls from './components/VolumeControls.vue'
+import NowPlayingView from './components/NowPlayingView.vue'
 
 type LibraryView = 'library' | 'favorites' | number
 type PlaylistPrompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
@@ -30,6 +32,8 @@ const playerError = ref('')
 const current = ref<Track>()
 const queueSource = ref<Track>()
 const queueOpen = ref(false)
+const nowPlayingOpen = ref(false)
+watch(current, track => { if (!track) nowPlayingOpen.value = false })
 const audio = ref<HTMLAudioElement>()
 const playing = ref(false)
 const buffering = ref(false)
@@ -369,15 +373,15 @@ function keyboardPlayback(event: KeyboardEvent) {
   if ((event.code !== 'Space' && event.key !== ' ') || event.defaultPrevented || event.isComposing
       || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !current.value) return
   const target = event.target instanceof Element ? event.target : document.activeElement
-  if (document.querySelector('dialog[open]') || target?.closest('input:not([type="range"]),textarea,select,[role="textbox"],[contenteditable]:not([contenteditable="false"])')) return
+  const modal = document.querySelector('dialog[open]')
+  if (modal && modal.id !== 'now-playing-view' || target?.closest('input:not([type="range"]),textarea,select,[role="textbox"],[contenteditable]:not([contenteditable="false"])')) return
   const control = target?.closest('button,a,[role="button"],[role="menuitem"]')
   if (control && !control.matches('.track-button[aria-current="true"]')) return
   event.preventDefault()
   if (!event.repeat) void togglePlayback()
 }
 
-function setVolume(event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
+function setVolume(value: number) {
   if (!audio.value || !Number.isFinite(value)) return
   audio.value.volume = Math.max(0, Math.min(1, value))
   if (value > 0) audio.value.muted = false
@@ -606,10 +610,13 @@ onBeforeUnmount(() => {
 
     <footer class="player-bar" aria-label="音乐播放器">
       <div class="now-playing">
-        <TrackArtwork class="player-art" :class="{ active: playing }" :url="current?.coverUrl" />
+        <button type="button" class="now-playing-art-button" :disabled="!current" :aria-label="current ? `展开正在播放：${current.title}` : '展开正在播放'" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true">
+          <TrackArtwork class="player-art" :class="{ active: playing }" :url="current?.coverUrl" />
+        </button>
         <div class="now-playing-copy">
           <div class="now-playing-title">
-            <strong :title="current?.title">{{ current?.title ?? '还没有正在播放的音乐' }}</strong>
+            <button v-if="current" type="button" class="now-playing-title-button" :aria-label="`展开正在播放：${current.title}`" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true"><strong :title="current.title">{{ current.title }}</strong></button>
+            <strong v-else>还没有正在播放的音乐</strong>
             <div v-if="current" class="now-playing-actions" role="group" aria-label="当前歌曲操作">
               <FavoriteButton :title="current.title" :favorite="current.favorite" :busy="favoriting.has(current.id) || deleting || renaming || !!pendingDelete || !!pendingRename" @toggle="toggleFavorite(current)" />
               <button class="playlist-add-button" type="button" aria-label="将当前歌曲加入歌单" title="加入歌单" aria-haspopup="dialog"
@@ -635,14 +642,17 @@ onBeforeUnmount(() => {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h9M4 20h9m5-5 4 3-4 3z" /></svg>
           <span v-if="hasQueuedTracks" class="queue-count">{{ queuedTracks.length }}</span>
         </button>
-        <div class="volume-controls">
-          <button class="mute-toggle" type="button" :aria-label="muted || volume === 0 ? '取消静音' : '静音'" @click="toggleMute"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" /><path v-if="muted || volume === 0" d="m16 9 6 6m0-6-6 6" /><path v-else d="M16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /></svg></button>
-          <input class="volume-slider" type="range" min="0" max="1" step="0.01" :value="muted ? 0 : volume" aria-label="音量" :aria-valuetext="`${muted ? 0 : Math.round(volume * 100)}%`" :title="`音量 ${muted ? 0 : Math.round(volume * 100)}%`" @input="setVolume" />
-        </div>
+        <VolumeControls :volume="volume" :muted="muted" @volume="setVolume" @mute="toggleMute" />
       </div>
       <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="!!current && playbackMode === 'repeat-one' && !hasQueuedTracks && (currentIndex >= 0 || manualActive)" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
       <p v-if="playerError" class="player-error" role="alert">{{ playerError }} <button v-if="current" @click="select(current)">重试播放</button></p>
     </footer>
+    <NowPlayingView :open="nowPlayingOpen" :track="current" :playing="playing" :buffering="buffering" :time="playbackTime" :duration="duration"
+      :can-previous="canPrevious" :can-next="canNext" :volume="volume" :muted="muted"
+      :favorite-busy="!!current && (favoriting.has(current.id) || deleting || renaming || !!pendingDelete || !!pendingRename)"
+      :player-error="playerError" :favorite-error="favoriteError" :return-label="view === 'favorites' ? '返回收藏' : selectedPlaylist ? '返回歌单' : '返回曲库'"
+      @close="nowPlayingOpen = false" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo"
+      @favorite="current && toggleFavorite(current)" @volume="setVolume" @mute="toggleMute" @retry="current && select(current)" />
     <PlaybackQueuePanel :open="queueOpen" :current="current" :queued="queuedTracks" :upcoming="sourceTracks" :source-title="queueTitle" :mode="playbackMode"
       @close="queueOpen = false" @move="moveTrack" @remove="removeQueued" />
     <DeleteTrackDialog :track="pendingDelete" :busy="deleting" :error="deleteError" :is-current="pendingDelete?.id === current?.id" @cancel="pendingDelete = undefined" @confirm="confirmDelete" />

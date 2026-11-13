@@ -11,6 +11,7 @@ Aftertone is a personal music library and player that runs on your computer and 
 - **Library management:** Search by title or artist, read embedded tags and artwork on import, and edit titles, artists, albums, and covers.
 - **Favorites and playlists:** Save favorite tracks and build custom playlists. Start playback from the library, favorites, or a playlist.
 - **Playback controls:** Seek, adjust volume, use Space to play or pause, and switch between sequential playback, repeat-one, and shuffle.
+- **Full-window player:** Click the bottom player’s artwork or title for a focused view with a large cover, playback controls, favorites, and volume. Return with the back button or Escape without interrupting playback or losing your place in the library.
 - **Resume playback:** Reopen Aftertone in the same browser to return to the last track and position. Press Play to continue.
 - **Playback queue:** Choose Play Next from a track’s menu, then open the queue from the bottom player to reorder upcoming songs. Manually queued songs play before the rest of the original library, favorites, or playlist.
 - **Visual themes:** Choose Rainy Night or Forest Green from the theme selector in the header. Your browser remembers the choice, and you can switch while listening.
