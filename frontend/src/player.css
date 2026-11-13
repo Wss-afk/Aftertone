@@ -13,44 +13,44 @@
 .now-playing-title { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .player-bar .now-playing-title strong { flex: 0 1 auto; min-width: 0; font-size: 14px; line-height: 22px; }
 .now-playing-actions { display: flex; align-items: center; flex-shrink: 0; gap: 8px; }
-.now-playing-actions button { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; border-radius: 6px; color: #91aa9b; }
-.now-playing-actions button:hover:not(:disabled) { background: #2c3b31; color: var(--mint); }
+.now-playing-actions button { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; border-radius: 6px; color: var(--icon); }
+.now-playing-actions button:hover:not(:disabled) { background: var(--hover-bg); color: var(--accent); }
 .now-playing-actions button:focus-visible { outline-offset: 2px; }
 .player-bar .player-details { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-top: 4px; }
 .player-bar .player-details span { margin: 0; font-size: 12px; line-height: 18px; }
 .player-bar .player-details .player-artist, .player-bar .player-details .player-album { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.player-bar .player-details .player-artist { color: #adbdb2; }
-.player-bar .player-details .player-album { flex: 0 1 auto; max-width: 55%; color: #81998a; }
-.player-bar .player-details .player-detail-separator { flex: none; color: #60766a; }
+.player-bar .player-details .player-artist { color: var(--text-secondary); }
+.player-bar .player-details .player-album { flex: 0 1 auto; max-width: 55%; color: var(--text-subtle); }
+.player-bar .player-details .player-detail-separator { flex: none; color: var(--text-faint); }
 .player-bar .player-state:not(.visually-hidden) { font-size: 11px; line-height: 16px; margin-top: 4px; }
 .player-controls { min-width: 0; width: 100%; }
 .transport-controls { display: flex; align-items: center; justify-content: center; gap: 22px; margin-bottom: 7px; }
-.transport-controls .skip { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; color: #b9cec1; border-radius: 50%; }
-.transport-controls .skip:hover:not(:disabled) { background: #2e3d32; }
-.transport-controls .play-toggle { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border-radius: 50%; background: var(--mint); color: #183323; }
+.transport-controls .skip { display: grid; place-items: center; width: 32px; height: 32px; padding: 6px; color: var(--text-secondary); border-radius: 50%; }
+.transport-controls .skip:hover:not(:disabled) { background: var(--hover-bg); }
+.transport-controls .play-toggle { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border-radius: 50%; background: var(--accent); color: var(--on-accent); }
 .transport-controls .play-toggle:hover:not(:disabled) { filter: brightness(1.08); }
 .seek-row { display: grid; grid-template-columns: 50px minmax(0, 1fr) 50px; align-items: center; gap: 12px; }
-.time-elapsed, .time-total { font-size: 11px; color: #c5d4ca; font-variant-numeric: tabular-nums; }
+.time-elapsed, .time-total { font-size: 11px; color: var(--control-text); font-variant-numeric: tabular-nums; }
 .time-total { text-align: right; }
 .seek-slider { appearance: none; width: 100%; height: 24px; margin: 0; padding: 0; background: transparent; cursor: pointer; }
 .seek-slider:disabled { cursor: default; opacity: .4; }
-.seek-slider::-webkit-slider-runnable-track { height: 8px; border-radius: 10px; background: linear-gradient(to right, var(--mint) 0%, var(--mint) var(--seek-fill), #42554a var(--seek-fill), #42554a 100%); }
-.seek-slider::-moz-range-track { height: 8px; border-radius: 10px; background: linear-gradient(to right, var(--mint) 0%, var(--mint) var(--seek-fill), #42554a var(--seek-fill), #42554a 100%); }
-.seek-slider::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: -4px; border: 2px solid #e0ffed; border-radius: 50%; background: var(--mint); box-shadow: 0 0 10px #b6efd530; }
-.seek-slider::-moz-range-thumb { width: 13px; height: 13px; border: 2px solid #e0ffed; border-radius: 50%; background: var(--mint); }
-.seek-slider:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; border-radius: 5px; }
+.seek-slider::-webkit-slider-runnable-track { height: 8px; border-radius: 10px; background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--seek-fill), var(--progress-track) var(--seek-fill), var(--progress-track) 100%); }
+.seek-slider::-moz-range-track { height: 8px; border-radius: 10px; background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--seek-fill), var(--progress-track) var(--seek-fill), var(--progress-track) 100%); }
+.seek-slider::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: -4px; border: 2px solid var(--thumb-line); border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+.seek-slider::-moz-range-thumb { width: 13px; height: 13px; border: 2px solid var(--thumb-line); border-radius: 50%; background: var(--accent); }
+.seek-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 5px; }
 .player-settings { display: flex; align-items: center; justify-self: end; gap: 16px; padding: 0 8px; min-width: 0; }
-.queue-toggle { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: #aec6b6; }
-.queue-toggle:hover, .queue-toggle[aria-expanded="true"] { background: #2e3d32; color: var(--mint); }
-.queue-count { position: absolute; top: -4px; right: -5px; min-width: 15px; padding: 1px 3px; border-radius: 8px; background: var(--mint); color: #183323; font-size: 10px; }
-.player-settings .mode-toggle { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: #aec6b6; }
-.player-settings .mode-toggle:hover { background: #2e3d32; color: var(--mint); }
-.player-settings .mode-toggle[data-mode="repeat-one"], .player-settings .mode-toggle[data-mode="shuffle"] { color: var(--mint); background: #29392f; }
-.player-settings .mode-toggle:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
-.volume-controls { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid #3b4b41; }
-.volume-controls .mute-toggle { display: grid; place-items: center; padding: 4px; width: 28px; height: 28px; color: #b9cec1; border-radius: 4px; }
-.volume-controls .mute-toggle:hover { background: #2e3d32; }
-.volume-slider { width: 88px; height: 18px; margin: 0; accent-color: var(--mint); cursor: pointer; }
+.queue-toggle { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: var(--icon); }
+.queue-toggle:hover, .queue-toggle[aria-expanded="true"] { background: var(--hover-bg); color: var(--accent); }
+.queue-count { position: absolute; top: -4px; right: -5px; min-width: 15px; padding: 1px 3px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-size: 10px; }
+.player-settings .mode-toggle { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: var(--icon); }
+.player-settings .mode-toggle:hover { background: var(--hover-bg); color: var(--accent); }
+.player-settings .mode-toggle[data-mode="repeat-one"], .player-settings .mode-toggle[data-mode="shuffle"] { color: var(--accent); background: var(--active-bg); }
+.player-settings .mode-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.volume-controls { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid var(--active-line); }
+.volume-controls .mute-toggle { display: grid; place-items: center; padding: 4px; width: 28px; height: 28px; color: var(--text-secondary); border-radius: 4px; }
+.volume-controls .mute-toggle:hover { background: var(--hover-bg); }
+.volume-slider { width: 88px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .player-bar .player-error { grid-column: 1 / -1; }
 @media (max-width: 1360px) {
   .player-bar { grid-template-columns: minmax(0, 1fr) auto; padding: 16px 24px; column-gap: 24px; row-gap: 16px; }

@@ -17,6 +17,7 @@ import PlaylistDialog from './components/PlaylistDialog.vue'
 import { usePlaylists } from './composables/usePlaylists'
 import { forgetPlaybackPosition, readPlaybackPosition, writePlaybackPosition } from './utils/playbackPosition'
 import PlaybackQueuePanel from './components/PlaybackQueuePanel.vue'
+import ThemeSelect from './components/ThemeSelect.vue'
 
 type LibraryView = 'library' | 'favorites' | number
 type PlaylistPrompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
@@ -560,7 +561,7 @@ onBeforeUnmount(() => {
     </aside>
 
     <main>
-      <header class="topbar"><span>私人声音档案</span><span class="edition" lang="en">{{ appName }} / 01</span></header>
+      <header class="topbar"><span>私人声音档案</span><div class="topbar-actions"><ThemeSelect /><span class="edition" lang="en">{{ appName }} / 01</span></div></header>
       <section class="library" aria-labelledby="library-title">
         <div class="eyebrow">YOUR OWN FREQUENCY</div>
         <div class="library-heading">

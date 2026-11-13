@@ -1,23 +1,23 @@
 .artwork { overflow: hidden; position: relative; }
 .artwork img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.artwork .artwork-placeholder { margin: 0; color: #a1c7af; font-size: inherit; }
+.artwork .artwork-placeholder { margin: 0; color: var(--artwork-ink); font-size: inherit; }
 .track-button { display: grid; grid-template-columns: 19px 46px minmax(120px, 1fr) minmax(100px, .65fr) 50px 28px; gap: 18px; }
 .track-art { width: 46px; height: 46px; }
 .track-album { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.track-duration { color: #b9c8bf; font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
+.track-duration { color: var(--text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
 .now-playing .player-art { display: grid; margin: 0; width: 62px; height: 62px; font-size: 29px; }
 .now-playing .player-artist { margin-top: 6px; }
-.now-playing .player-album { margin-top: 4px; color: #83998a; font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-playing .player-album { margin-top: 4px; color: var(--text-subtle); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .now-playing .player-state { margin-top: 4px; }
 .rename-dialog { max-height: calc(100dvh - 48px); overflow-y: auto; }
 .rename-dialog .album-label { margin-top: 20px; }
 .album-help, .cover-help { font-size: 10px; color: var(--muted); line-height: 1.7; margin-top: 9px; }
 .cover-editor { display: flex; gap: 18px; align-items: center; padding-bottom: 24px; margin-bottom: 23px; border-bottom: 1px solid var(--line); }
-.cover-preview { display: grid; place-items: center; width: 88px; height: 88px; flex-shrink: 0; border: 1px solid #405246; border-radius: 6px; background: #2b3830; color: #a1c7af; font-size: 35px; }
+.cover-preview { display: grid; place-items: center; width: 88px; height: 88px; flex-shrink: 0; border: 1px solid var(--artwork-line); border-radius: 6px; background: var(--artwork-bg); color: var(--artwork-ink); font-size: 35px; }
 .cover-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.rename-dialog .cover-picker { position: relative; overflow: hidden; display: inline-block; margin: 0; padding: 9px 12px; border: 1px solid #53645a; border-radius: 5px; cursor: pointer; font-size: 11px; }
+.rename-dialog .cover-picker { position: relative; overflow: hidden; display: inline-block; margin: 0; padding: 9px 12px; border: 1px solid var(--control-line); border-radius: 5px; cursor: pointer; font-size: 11px; }
 .rename-dialog .cover-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; padding: 0; }
-.cover-picker:focus-within { outline: 2px solid var(--mint); outline-offset: 3px; }
+.cover-picker:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
 .cover-remove, .cover-reset { color: var(--muted); font-size: 11px; padding: 9px 0; }
 .cover-error { font-size: 11px; line-height: 1.7; margin-top: 9px; }
 @media (max-width: 1000px) {

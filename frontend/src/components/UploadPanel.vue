@@ -131,7 +131,7 @@ async function importFiles(batch: UploadItem[]) {
 </template>
 
 <style scoped>
-.upload-dragging { border-color: var(--mint); background: #203027; }
+.upload-dragging { border-color: var(--accent); background: var(--active-bg); }
 .upload-queue { flex: 0 0 100%; min-width: 0; }
 .upload-queue-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
 .upload-queue-list { max-height: 270px; overflow-y: auto; list-style: none; margin: 8px 0 0; padding: 0; }
@@ -140,5 +140,5 @@ async function importFiles(batch: UploadItem[]) {
 .upload-file-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .upload-file-info small { display: block; margin-top: 4px; overflow-wrap: anywhere; }
 .upload-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
-.upload-row-actions button, .upload-queue-header button { color: var(--mint); padding: 3px 4px; }
+.upload-row-actions button, .upload-queue-header button { color: var(--accent); padding: 3px 4px; }
 </style>
