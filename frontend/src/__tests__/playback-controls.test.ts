@@ -4,6 +4,7 @@ import App from '../App.vue'
 import { listTracks, deleteTrack, type Track } from '../api/tracks'
 import { getStorageStatus } from '../api/storage'
 import { PLAYBACK_MODE_KEY } from '../composables/usePlaybackQueue'
+import { PLAYBACK_POSITION_KEY } from '../utils/playbackPosition'
 
 vi.mock('../api/tracks', () => ({ listTracks: vi.fn(), deleteTrack: vi.fn(), uploadTrack: vi.fn(), renameTrack: vi.fn(), setTrackFavorite: vi.fn() }))
 vi.mock('../api/storage', () => ({ getStorageStatus: vi.fn() }))
@@ -175,6 +176,93 @@ describe('playback modes', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Blocked') })
     await open(); await button('播放 甲'); await mode('repeat-one')
     expect((wrapper.get('audio').element as HTMLAudioElement).loop).toBe(true)
+  })
+})
+
+describe('restoring playback position', () => {
+  function savePosition(track: Track, time: number) {
+    localStorage.setItem(PLAYBACK_POSITION_KEY, JSON.stringify({ trackId: track.id, createdAt: track.createdAt, time }))
+  }
+
+  it('saves on page exit and resumes from the restored position only after a click', async () => {
+    const audio = await open()
+    await button('播放 乙')
+    audio.currentTime = 37.1
+    await wrapper.get('audio').trigger('timeupdate')
+    audio.currentTime = 37.6
+    window.dispatchEvent(new Event('pagehide'))
+    expect(JSON.parse(localStorage.getItem(PLAYBACK_POSITION_KEY) ?? 'null')).toMatchObject({ trackId: second.id, time: 37.6 })
+    wrapper.unmount()
+    play.mockClear()
+
+    const restored = await open()
+    expect(wrapper.get('.now-playing strong').text()).toBe('乙')
+    await wrapper.get('audio').trigger('timeupdate')
+    await wrapper.get('audio').trigger('loadedmetadata')
+    expect(restored.currentTime).toBe(37.6)
+    expect(wrapper.get('.time-elapsed').text()).toBe('0:37')
+    expect(restored.paused).toBe(true)
+    expect(play).not.toHaveBeenCalled()
+
+    await button('播放')
+    expect(restored.currentTime).toBe(37.6)
+    expect(restored.paused).toBe(false)
+  })
+
+  it('discards a pending seek if another song is selected before metadata arrives', async () => {
+    savePosition(second, 37)
+    const audio = await open()
+    await button('播放 丙')
+    await wrapper.get('audio').trigger('loadedmetadata')
+    expect(audio.getAttribute('src')).toBe(third.audioUrl)
+    expect(audio.currentTime).toBe(0)
+    expect(JSON.parse(localStorage.getItem(PLAYBACK_POSITION_KEY) ?? 'null')).toMatchObject({ trackId: third.id, time: 0 })
+  })
+
+  it('applies the pending seek when the user presses play before metadata arrives', async () => {
+    savePosition(second, 37)
+    const audio = await open()
+    await button('播放')
+    await wrapper.get('audio').trigger('loadedmetadata')
+    expect(audio.currentTime).toBe(37)
+    expect(audio.paused).toBe(false)
+  })
+
+  it('keeps the saved position through a failed library load and restores it on retry', async () => {
+    savePosition(second, 37)
+    vi.mocked(listTracks).mockRejectedValueOnce(new Error('曲库暂不可用'))
+    const audio = await open()
+    expect(audio.getAttribute('src')).toBeNull()
+    await wrapper.get('.list-heading button').trigger('click')
+    await flushPromises()
+    await wrapper.get('audio').trigger('loadedmetadata')
+    expect(audio.currentTime).toBe(37)
+    expect(play).not.toHaveBeenCalled()
+  })
+
+  it('ignores a saved song whose ID was reused by a new library', async () => {
+    savePosition({ ...second, createdAt: '2026-11-05T00:00:00Z' }, 37)
+    const audio = await open()
+    expect(audio.getAttribute('src')).toBeNull()
+    expect(localStorage.getItem(PLAYBACK_POSITION_KEY)).toBeNull()
+    expect(play).not.toHaveBeenCalled()
+  })
+
+  it('restores a finished song at the beginning and leaves playback paused', async () => {
+    savePosition(third, 100)
+    const audio = await open()
+    await wrapper.get('audio').trigger('loadedmetadata')
+    expect(audio.getAttribute('src')).toBe(third.audioUrl)
+    expect(audio.currentTime).toBe(0)
+    expect(play).not.toHaveBeenCalled()
+  })
+
+  it('clears the saved position after the restored song is deleted', async () => {
+    savePosition(second, 37)
+    await open()
+    await remove('乙')
+    expect(localStorage.getItem(PLAYBACK_POSITION_KEY)).toBeNull()
+    expect(wrapper.get('audio').attributes('src')).toBeUndefined()
   })
 })
 

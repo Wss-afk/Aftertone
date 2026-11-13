@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { deleteTrack, listTracks, renameTrack, setTrackFavorite, type Track } from './api/tracks'
 import { addToPlaylist, createPlaylist, removeFromPlaylist, renamePlaylist, type Playlist } from './api/playlists'
 import TrackList from './components/TrackList.vue'
@@ -15,6 +15,7 @@ import TrackArtwork from './components/TrackArtwork.vue'
 import FavoriteButton from './components/FavoriteButton.vue'
 import PlaylistDialog from './components/PlaylistDialog.vue'
 import { usePlaylists } from './composables/usePlaylists'
+import { forgetPlaybackPosition, readPlaybackPosition, writePlaybackPosition } from './utils/playbackPosition'
 
 type LibraryView = 'library' | 'favorites' | number
 type PlaylistPrompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
@@ -30,6 +31,10 @@ const playing = ref(false)
 const buffering = ref(false)
 const playbackTime = ref(0)
 const duration = ref(0)
+let positionToRestore = readPlaybackPosition()
+let lastSavedPosition = positionToRestore
+let pendingSeek: { time: number; restartAtEnd?: boolean } | undefined
+let persistProgress = false
 const volume = ref(1)
 const muted = ref(false)
 let audibleVolume = 1
@@ -194,6 +199,7 @@ async function refresh() {
         ? { ...track, favorite: tracks.value.find(item => item.id === track.id)?.favorite ?? track.favorite } : track)
       const updated = tracks.value.find(track => track.id === current.value?.id)
       if (current.value && updated) current.value = { ...current.value, favorite: updated.favorite }
+      restorePlaybackPosition()
     }
   }
   catch (error) { if (request === listRequest) listError.value = error instanceof Error ? error.message : '曲库加载失败，请重试。' }
@@ -240,7 +246,14 @@ async function refreshCapacity() {
 async function select(track: Track, historyPosition?: number) {
   const request = ++playRequest
   playerError.value = ''
-  if (current.value?.id !== track.id) { playbackTime.value = 0; duration.value = 0 }
+  positionToRestore = undefined
+  persistProgress = true
+  if (current.value?.id !== track.id) {
+    pendingSeek = undefined
+    playbackTime.value = 0
+    duration.value = 0
+    rememberPosition(track, 0, true)
+  }
   current.value = track
   recordSelection(track.id, historyPosition)
   await nextTick()
@@ -256,21 +269,72 @@ async function select(track: Track, historyPosition?: number) {
   }
 }
 
-function updateTime() {
-  const value = audio.value?.currentTime ?? 0
+function restorePlaybackPosition() {
+  const position = positionToRestore
+  positionToRestore = undefined
+  if (!position) return
+  const track = tracksById.value.get(position.trackId)
+  if (track?.createdAt !== position.createdAt) {
+    forgetPlaybackPosition(position.trackId, position.createdAt)
+    return
+  }
+  current.value = track
+  pendingSeek = { time: position.time, restartAtEnd: true }
+  recordSelection(track.id)
+}
+
+function currentAudio() {
+  const element = audio.value
+  if (!element || !current.value || element.getAttribute('src') !== current.value.audioUrl) return
+  if (!element.currentSrc || element.currentSrc === element.src) return element
+}
+
+function rememberPosition(track: Track, time: number, exact: boolean) {
+  if (!Number.isFinite(time) || time < 0) return
+  if (lastSavedPosition?.trackId === track.id && lastSavedPosition.createdAt === track.createdAt) {
+    const difference = Math.abs(lastSavedPosition.time - time)
+    if (exact ? difference === 0 : difference < 1) return
+  }
+  lastSavedPosition = { trackId: track.id, createdAt: track.createdAt, time }
+  writePlaybackPosition(lastSavedPosition)
+}
+
+function updateTime(exact = false) {
+  const element = currentAudio()
+  if (!element || pendingSeek !== undefined) return
+  const value = element.currentTime
   playbackTime.value = Number.isFinite(value) ? Math.max(0, value) : 0
+  if (persistProgress && current.value && element.readyState >= 1 && !element.error) {
+    rememberPosition(current.value, value, exact)
+  }
+}
+
+function savePositionOnExit() { updateTime(true) }
+
+function savePositionWhenHidden() {
+  if (document.visibilityState === 'hidden') savePositionOnExit()
 }
 
 function updateMetadata() {
-  const value = audio.value?.duration ?? 0
+  const element = currentAudio()
+  if (!element) return
+  const value = element.duration
   duration.value = Number.isFinite(value) && value > 0 ? value : 0
+  if (pendingSeek !== undefined && element.readyState >= 1 && duration.value > 0) {
+    // A track already played to its end starts from the beginning on the next visit.
+    element.currentTime = pendingSeek.restartAtEnd && pendingSeek.time >= duration.value
+      ? 0 : Math.min(pendingSeek.time, duration.value)
+    pendingSeek = undefined
+  }
   updateTime()
 }
 
 function seekTo(value: number) {
-  if (!audio.value || !current.value || !Number.isFinite(value) || duration.value <= 0) return
-  audio.value.currentTime = Math.max(0, Math.min(duration.value, value))
-  updateTime()
+  const element = currentAudio()
+  if (!element || !Number.isFinite(value) || duration.value <= 0) return
+  persistProgress = true
+  element.currentTime = Math.max(0, Math.min(duration.value, value))
+  updateTime(true)
 }
 
 async function togglePlayback() {
@@ -280,7 +344,7 @@ async function togglePlayback() {
     audio.value.pause()
     playing.value = false
     buffering.value = false
-    updateTime()
+    updateTime(true)
   } else await select(current.value)
 }
 
@@ -327,7 +391,7 @@ function adjacent(direction: -1 | 1) {
 function ended() {
   playing.value = false
   buffering.value = false
-  if (currentIndex.value < 0 || !current.value) return
+  if (!persistProgress || currentIndex.value < 0 || !current.value) return
   if (playbackMode.value === 'repeat-one') {
     if (audio.value) audio.value.currentTime = 0
     playbackTime.value = 0
@@ -382,11 +446,12 @@ async function confirmDelete() {
   deleteError.value = ''
   const snapshot = current.value?.id === track.id ? {
     track: current.value,
-    time: audio.value?.currentTime ?? 0,
+    seek: pendingSeek ?? { time: audio.value?.currentTime ?? 0 },
     wasPlaying: !!audio.value && !audio.value.paused,
   } : undefined
   const request = snapshot ? ++playRequest : playRequest
   if (snapshot) {
+    pendingSeek = undefined
     current.value = undefined
     playing.value = false
     buffering.value = false
@@ -399,6 +464,7 @@ async function confirmDelete() {
   }
   try {
     await deleteTrack(track.id)
+    forgetPlaybackPosition(track.id, track.createdAt)
     ++listRequest // Ignore a list response that started before this deletion completed.
     loading.value = false
     tracks.value = tracks.value.filter(item => item.id !== track.id)
@@ -410,17 +476,12 @@ async function confirmDelete() {
   } catch (error) {
     deleteError.value = error instanceof Error ? error.message : '删除失败，请重试。'
     if (snapshot && request === playRequest && !current.value) {
+      pendingSeek = snapshot.seek
       current.value = snapshot.track
       await nextTick()
       const element = audio.value
-      if (element) {
-        const restorePosition = () => {
-          if (request !== playRequest || current.value?.id !== track.id) return
-          element.currentTime = Math.min(snapshot.time, Number.isFinite(element.duration) ? element.duration : snapshot.time)
-          updateMetadata()
-        }
-        if (element.readyState >= 1) restorePosition()
-        else element.addEventListener('loadedmetadata', restorePosition, { once: true })
+      if (element && request === playRequest) {
+        if (element.readyState >= 1) updateMetadata()
         if (snapshot.wasPlaying) {
           try { await element.play() }
           catch { if (request === playRequest) playerError.value = '歌曲已保留，暂时无法恢复播放，请重试。' }
@@ -435,10 +496,16 @@ onMounted(() => {
   void refreshCapacity()
   window.addEventListener('focus', refreshCapacity)
   window.addEventListener('keydown', keyboardPlayback)
+  window.addEventListener('pagehide', savePositionOnExit)
+  document.addEventListener('visibilitychange', savePositionWhenHidden)
 })
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  savePositionOnExit()
+  ++listRequest
   window.removeEventListener('focus', refreshCapacity)
   window.removeEventListener('keydown', keyboardPlayback)
+  window.removeEventListener('pagehide', savePositionOnExit)
+  document.removeEventListener('visibilitychange', savePositionWhenHidden)
 })
 </script>
 
@@ -542,7 +609,7 @@ onUnmounted(() => {
           <input class="volume-slider" type="range" min="0" max="1" step="0.01" :value="muted ? 0 : volume" aria-label="音量" :aria-valuetext="`${muted ? 0 : Math.round(volume * 100)}%`" :title="`音量 ${muted ? 0 : Math.round(volume * 100)}%`" @input="setVolume" />
         </div>
       </div>
-      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="playbackMode === 'repeat-one' && currentIndex >= 0" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime()" @timeupdate="updateTime" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
+      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="playbackMode === 'repeat-one' && currentIndex >= 0" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
       <p v-if="playerError" class="player-error" role="alert">{{ playerError }} <button v-if="current" @click="select(current)">重试播放</button></p>
     </footer>
     <DeleteTrackDialog :track="pendingDelete" :busy="deleting" :error="deleteError" :is-current="pendingDelete?.id === current?.id" @cancel="pendingDelete = undefined" @confirm="confirmDelete" />
