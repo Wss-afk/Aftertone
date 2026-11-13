@@ -5,7 +5,7 @@ import TrackArtwork from './TrackArtwork.vue'
 import { formatDuration } from '../utils/duration'
 import FavoriteButton from './FavoriteButton.vue'
 defineProps<{ tracks: Track[]; currentId?: number; playing: boolean; deleting?: boolean; favoriting?: Set<number>; label?: string; inPlaylist?: boolean }>()
-defineEmits<{ select: [track: Track]; delete: [track: Track]; rename: [track: Track]; favorite: [track: Track]; removeFromPlaylist: [track: Track] }>()
+defineEmits<{ select: [track: Track]; delete: [track: Track]; rename: [track: Track]; favorite: [track: Track]; removeFromPlaylist: [track: Track]; playNext: [track: Track] }>()
 </script>
 
 <template>
@@ -21,7 +21,7 @@ defineEmits<{ select: [track: Track]; delete: [track: Track]; rename: [track: Tr
       </button>
       <FavoriteButton :title="track.title" :favorite="track.favorite" :busy="deleting || favoriting?.has(track.id)" @toggle="$emit('favorite', track)" />
       <TrackActions :track="track" :busy="deleting || favoriting?.has(track.id)" :in-playlist="inPlaylist"
-        @rename="$emit('rename', track)" @delete="$emit('delete', track)" @remove-from-playlist="$emit('removeFromPlaylist', track)" />
+        @rename="$emit('rename', track)" @delete="$emit('delete', track)" @remove-from-playlist="$emit('removeFromPlaylist', track)" @play-next="$emit('playNext', track)" />
     </li>
   </ol>
 </template>

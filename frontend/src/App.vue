@@ -16,6 +16,7 @@ import FavoriteButton from './components/FavoriteButton.vue'
 import PlaylistDialog from './components/PlaylistDialog.vue'
 import { usePlaylists } from './composables/usePlaylists'
 import { forgetPlaybackPosition, readPlaybackPosition, writePlaybackPosition } from './utils/playbackPosition'
+import PlaybackQueuePanel from './components/PlaybackQueuePanel.vue'
 
 type LibraryView = 'library' | 'favorites' | number
 type PlaylistPrompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
@@ -26,6 +27,8 @@ const loading = ref(true)
 const listError = ref('')
 const playerError = ref('')
 const current = ref<Track>()
+const queueSource = ref<Track>()
+const queueOpen = ref(false)
 const audio = ref<HTMLAudioElement>()
 const playing = ref(false)
 const buffering = ref(false)
@@ -63,7 +66,7 @@ watch(selectedPlaylist, (playlist, previous) => {
 })
 const queuePlaylist = computed(() => playlists.value.find(playlist => playlist.id === queueScope.value))
 const playlistPosition = ref<number>()
-watch(() => queuePlaylist.value?.entries.find(entry => entry.trackId === current.value?.id)?.position, position => {
+watch(() => queuePlaylist.value?.entries.find(entry => entry.trackId === queueSource.value?.id)?.position, position => {
   if (position !== undefined) playlistPosition.value = position
 }, { flush: 'sync' })
 const favoriting = ref(new Set<number>())
@@ -77,10 +80,10 @@ const viewTracks = computed(() => {
 })
 const queueTracks = computed(() => {
   if (queueScope.value === 'library') return tracks.value
-  if (queueScope.value === 'favorites') return tracks.value.filter(track => track.favorite || track.id === current.value?.id)
+  if (queueScope.value === 'favorites') return tracks.value.filter(track => track.favorite || track.id === queueSource.value?.id)
   const entries = (queuePlaylist.value?.entries ?? []).filter(entry => tracksById.value.has(entry.trackId))
   const queue = entries.flatMap(({ trackId }) => tracksById.value.get(trackId) ?? [])
-  const playingTrack = current.value
+  const playingTrack = queueSource.value
   if (playingTrack && tracksById.value.has(playingTrack.id) && !entries.some(entry => entry.trackId === playingTrack.id)) {
     // Preserve the removed song's slot until the next selection, using stable membership positions.
     const next = entries.findIndex(entry => entry.position > (playlistPosition.value ?? Infinity))
@@ -99,7 +102,13 @@ const visibleTracks = computed(() => searching.value ? viewTracks.value.filter(t
 let capacityRequest = 0
 let playRequest = 0
 let listRequest = 0
-const { mode: playbackMode, currentIndex, canPrevious, canNext, recordSelection, step, resetHistory } = usePlaybackQueue(queueTracks, current)
+const {
+  mode: playbackMode, currentIndex, canPrevious, canNext, recordSelection, step, resetHistory, resetQueue,
+  queuedTracks, sourceTracks, hasQueuedTracks, manualActive, enqueueNext, moveTrack, removeQueued, prepareUpcoming,
+} = usePlaybackQueue(queueTracks, current, queueSource, tracks)
+const queueTitle = computed(() => queueScope.value === 'favorites' ? '我喜欢的音乐'
+  : typeof queueScope.value === 'number' ? queuePlaylist.value?.name ?? '原歌单' : '我的曲库')
+watch([queueOpen, playbackMode, current, queueTracks], () => { if (queueOpen.value) prepareUpcoming() })
 const libraryNote = computed(() => {
   if (!tracks.value.length) return '你的音乐保存在这台电脑上。'
   if (queuePlaylist.value && current.value) return `正在播放歌单「${queuePlaylist.value.name}」。切换页面和搜索不会改变当前播放队列。`
@@ -231,7 +240,15 @@ function selectFromView(track: Track) {
     playlistPosition.value = undefined
   }
   queueScope.value = view.value
+  resetQueue()
+  recordSelection(track)
   void select(track)
+}
+
+function playNext(track: Track) {
+  if (!current.value) { selectFromView(track); return }
+  enqueueNext(track)
+  notice.value = `「${track.title}」将下一首播放。`
 }
 
 async function refreshCapacity() {
@@ -243,7 +260,7 @@ async function refreshCapacity() {
   finally { if (request === capacityRequest) capacityLoading.value = false }
 }
 
-async function select(track: Track, historyPosition?: number) {
+async function select(track: Track) {
   const request = ++playRequest
   playerError.value = ''
   positionToRestore = undefined
@@ -255,7 +272,6 @@ async function select(track: Track, historyPosition?: number) {
     rememberPosition(track, 0, true)
   }
   current.value = track
-  recordSelection(track.id, historyPosition)
   await nextTick()
   if (request !== playRequest || !audio.value) return
   if (audio.value.error) audio.value.load()
@@ -280,7 +296,7 @@ function restorePlaybackPosition() {
   }
   current.value = track
   pendingSeek = { time: position.time, restartAtEnd: true }
-  recordSelection(track.id)
+  recordSelection(track)
 }
 
 function currentAudio() {
@@ -385,14 +401,20 @@ function syncVolume() {
 
 function adjacent(direction: -1 | 1) {
   const target = step(direction)
-  if (target) void select(target.track, target.historyPosition)
+  if (!target) return
+  if (target.id === current.value?.id && audio.value) {
+    audio.value.currentTime = 0
+    playbackTime.value = 0
+  }
+  void select(target)
 }
 
 function ended() {
   playing.value = false
   buffering.value = false
-  if (!persistProgress || currentIndex.value < 0 || !current.value) return
-  if (playbackMode.value === 'repeat-one') {
+  if (!persistProgress || !current.value) return
+  if (playbackMode.value === 'repeat-one' && !hasQueuedTracks.value) {
+    if (currentIndex.value < 0 && !manualActive.value) return
     if (audio.value) audio.value.currentTime = 0
     playbackTime.value = 0
     void select(current.value)
@@ -572,7 +594,7 @@ onBeforeUnmount(() => {
         <div v-else-if="!tracks.length" class="empty-state"><span aria-hidden="true">♫</span><h3>第一首，留给你喜欢的歌。</h3><p>上传第一首音频，然后从曲库开始播放。</p></div>
         <div v-else-if="!visibleTracks.length" class="empty-state search-empty"><span aria-hidden="true">⌕</span><h3>没有匹配的歌曲</h3><p>{{ view === 'favorites' ? '换个歌名或歌手试试，或者清空搜索查看全部收藏。' : selectedPlaylist ? '换个歌名或歌手试试，或者清空搜索查看整个歌单。' : '换个歌名或歌手试试，或者清空搜索查看全部曲库。' }}</p><button type="button" class="search-reset" @click="clearSearch">{{ view === 'favorites' ? '查看全部收藏' : '查看全部歌曲' }}</button></div>
         <TrackList v-else :tracks="visibleTracks" :label="searching ? '搜索结果' : view === 'library' ? '最近上传的歌曲' : viewTitle" :current-id="current?.id" :playing="playing" :deleting="deleting || renaming || playlistBusy" :favoriting="favoriting" :in-playlist="!!selectedPlaylist"
-          @select="selectFromView" @delete="requestDelete" @rename="requestRename" @favorite="toggleFavorite" @remove-from-playlist="removeTrackFromPlaylist" />
+          @select="selectFromView" @delete="requestDelete" @rename="requestRename" @favorite="toggleFavorite" @remove-from-playlist="removeTrackFromPlaylist" @play-next="playNext" />
         </div>
         <p v-if="notice" class="library-notice success" role="status">{{ notice }}</p>
         <p v-if="favoriteError" class="favorite-error error" role="alert">{{ favoriteError }} <button type="button" @click="refresh">刷新曲库</button></p>
@@ -604,14 +626,20 @@ onBeforeUnmount(() => {
       <PlayerControls :track-id="current?.id" :playing="playing" :time="playbackTime" :duration="duration" :can-previous="canPrevious" :can-next="canNext" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo" />
       <div class="player-settings">
         <PlaybackModeButton v-model:mode="playbackMode" />
+        <button class="queue-toggle" type="button" aria-label="播放队列" title="播放队列" aria-haspopup="dialog" :aria-expanded="queueOpen" aria-controls="playback-queue" @click="queueOpen = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h9M4 20h9m5-5 4 3-4 3z" /></svg>
+          <span v-if="hasQueuedTracks" class="queue-count">{{ queuedTracks.length }}</span>
+        </button>
         <div class="volume-controls">
           <button class="mute-toggle" type="button" :aria-label="muted || volume === 0 ? '取消静音' : '静音'" @click="toggleMute"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" /><path v-if="muted || volume === 0" d="m16 9 6 6m0-6-6 6" /><path v-else d="M16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /></svg></button>
           <input class="volume-slider" type="range" min="0" max="1" step="0.01" :value="muted ? 0 : volume" aria-label="音量" :aria-valuetext="`${muted ? 0 : Math.round(volume * 100)}%`" :title="`音量 ${muted ? 0 : Math.round(volume * 100)}%`" @input="setVolume" />
         </div>
       </div>
-      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="playbackMode === 'repeat-one' && currentIndex >= 0" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
+      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="!!current && playbackMode === 'repeat-one' && !hasQueuedTracks && (currentIndex >= 0 || manualActive)" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
       <p v-if="playerError" class="player-error" role="alert">{{ playerError }} <button v-if="current" @click="select(current)">重试播放</button></p>
     </footer>
+    <PlaybackQueuePanel :open="queueOpen" :current="current" :queued="queuedTracks" :upcoming="sourceTracks" :source-title="queueTitle" :mode="playbackMode"
+      @close="queueOpen = false" @move="moveTrack" @remove="removeQueued" />
     <DeleteTrackDialog :track="pendingDelete" :busy="deleting" :error="deleteError" :is-current="pendingDelete?.id === current?.id" @cancel="pendingDelete = undefined" @confirm="confirmDelete" />
     <RenameTrackDialog :track="pendingRename" :busy="renaming" :error="renameError" @cancel="pendingRename = undefined" @save="saveRename" />
     <PlaylistDialog :prompt="playlistPrompt" :playlists="playlists" :busy="playlistBusy" :error="playlistError" @cancel="playlistPrompt = undefined; playlistError = ''" @name="savePlaylistName" @add="addTrackToPlaylist" @delete="confirmPlaylistDeletion" />

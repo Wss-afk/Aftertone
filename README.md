@@ -12,6 +12,7 @@ Aftertone is a personal music library and player that runs on your computer and 
 - **Favorites and playlists:** Save favorite tracks and build custom playlists. Start playback from the library, favorites, or a playlist.
 - **Playback controls:** Seek, adjust volume, use Space to play or pause, and switch between sequential playback, repeat-one, and shuffle.
 - **Resume playback:** Reopen Aftertone in the same browser to return to the last track and position. Press Play to continue.
+- **Playback queue:** Choose Play Next from a track’s menu, then open the queue from the bottom player to reorder upcoming songs. Manually queued songs play before the rest of the original library, favorites, or playlist.
 - **Storage protection:** See how much space your library uses and how much is free. Imports pause when the disk falls below the configured free-space threshold.
 
 ## How it works

@@ -31,6 +31,9 @@
 .seek-slider::-moz-range-thumb { width: 13px; height: 13px; border: 2px solid #e0ffed; border-radius: 50%; background: var(--mint); }
 .seek-slider:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; border-radius: 5px; }
 .player-settings { display: flex; align-items: center; justify-self: end; gap: 16px; padding: 0 8px; min-width: 0; }
+.queue-toggle { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: #aec6b6; }
+.queue-toggle:hover, .queue-toggle[aria-expanded="true"] { background: #2e3d32; color: var(--mint); }
+.queue-count { position: absolute; top: -4px; right: -5px; min-width: 15px; padding: 1px 3px; border-radius: 8px; background: var(--mint); color: #183323; font-size: 10px; }
 .player-settings .mode-toggle { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 7px; color: #aec6b6; }
 .player-settings .mode-toggle:hover { background: #2e3d32; color: var(--mint); }
 .player-settings .mode-toggle[data-mode="repeat-one"], .player-settings .mode-toggle[data-mode="shuffle"] { color: var(--mint); background: #29392f; }
@@ -40,7 +43,7 @@
 .volume-controls .mute-toggle:hover { background: #2e3d32; }
 .volume-slider { width: 88px; height: 18px; margin: 0; accent-color: var(--mint); cursor: pointer; }
 .player-bar .player-error { grid-column: 1 / -1; }
-@media (max-width: 1280px) {
+@media (max-width: 1360px) {
   .player-bar { grid-template-columns: minmax(0, 1fr) auto; padding: 14px 24px; gap: 12px; }
   .player-bar .now-playing { grid-row: 1; grid-column: 1; }
   .player-settings { grid-row: 1; grid-column: 2; }

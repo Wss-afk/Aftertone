@@ -54,10 +54,10 @@ describe('single-track deletion', () => {
   it('shows the chosen title and cancelling leaves songs and playback untouched', async () => {
     const audio = await open()
     await button('删除 甲')
-    expect(wrapper.get('dialog').attributes('open')).toBeDefined()
+    expect(wrapper.get('dialog.delete-dialog').attributes('open')).toBeDefined()
     expect(wrapper.get('.delete-track-title').text()).toBe('甲')
     await wrapper.get('.dialog-cancel').trigger('click')
-    expect(wrapper.get('dialog').attributes('open')).toBeUndefined()
+    expect(wrapper.get('dialog.delete-dialog').attributes('open')).toBeUndefined()
     expect(deleteTrack).not.toHaveBeenCalled()
     expect(play).not.toHaveBeenCalled()
     expect(audio.getAttribute('src')).toBeNull()
@@ -99,7 +99,7 @@ describe('single-track deletion', () => {
     audio.currentTime = 37
     await button('删除 甲')
     await confirm()
-    expect(wrapper.get('dialog').attributes('open')).toBeDefined()
+    expect(wrapper.get('dialog.delete-dialog').attributes('open')).toBeDefined()
     expect(wrapper.get('[role="alert"]').text()).toContain('文件暂时无法删除')
     expect(wrapper.findAll('.track-button')).toHaveLength(2)
     expect(audio.getAttribute('src')).toBe(first.audioUrl)

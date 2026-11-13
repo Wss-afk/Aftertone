@@ -3,7 +3,7 @@ import { nextTick, onUnmounted, ref, watch } from 'vue'
 import type { Track } from '../api/tracks'
 
 const props = defineProps<{ track: Track; busy?: boolean; inPlaylist?: boolean }>()
-type Action = 'rename' | 'delete' | 'remove-from-playlist'
+type Action = 'rename' | 'delete' | 'remove-from-playlist' | 'play-next'
 const emit = defineEmits<(event: Action) => void>()
 const expanded = ref(false)
 const root = ref<HTMLDivElement>()
@@ -63,6 +63,7 @@ function navigate(event: KeyboardEvent) {
       <button type="button" role="menuitem" data-action="rename" tabindex="-1" @click="choose('rename')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6L16 3ZM13 6l5 5" /></svg>修改信息
       </button>
+      <button type="button" role="menuitem" data-action="play-next" tabindex="-1" @click="choose('play-next')">下一首播放</button>
       <button v-if="inPlaylist" type="button" role="menuitem" data-action="remove-from-playlist" tabindex="-1" @click="choose('remove-from-playlist')">从此歌单移出</button>
       <button type="button" role="menuitem" data-action="delete" class="menu-delete" tabindex="-1" @click="choose('delete')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>删除歌曲
