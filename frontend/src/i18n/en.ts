@@ -2,6 +2,22 @@ export type Params = Record<string, string | number>
 export type Translation = string | ((params: Params) => string)
 
 export const en = {
+  '键盘快捷键': 'Keyboard shortcuts',
+  '键盘快捷键（?）': 'Keyboard shortcuts (?)',
+  '关闭快捷键说明': 'Close keyboard shortcuts',
+  '关闭': 'Close',
+  '空格': 'Space',
+  '播放 / 暂停': 'Play / pause',
+  '上一首 / 下一首': 'Previous / next track',
+  '后退 / 前进 5 秒': 'Back / forward 5 seconds',
+  '降低 / 提高音量 5%': 'Volume down / up 5%',
+  '静音 / 取消静音': 'Mute / unmute',
+  '聚焦搜索': 'Focus search',
+  '打开快捷键说明': 'Open keyboard shortcuts',
+  '启用键盘快捷键': 'Enable keyboard shortcuts',
+  '选歌后可使用播放快捷键；搜索和说明随时可用。': 'Select a track to use playback shortcuts. Search and help are available anytime.',
+  '输入框、下拉菜单、操作菜单和弹窗保留自己的按键；全屏播放器支持播放快捷键。滑块保留方向键、Home 和 End，浏览器组合键照常使用。按钮聚焦时，空格仍激活按钮。': 'Inputs, dropdowns, menus, and dialogs keep their own keys. Playback shortcuts work in Now Playing. Sliders keep their arrow, Home, and End keys; browser key combinations still work. Space still activates a focused button.',
+  '偏好保存在当前浏览器。关闭快捷键后，仍可用问号按钮打开此说明。': 'Your browser remembers this setting. You can still open this panel with the question mark button when shortcuts are off.',
   '语言': 'Language',
   '主题': 'Theme',
   '雨夜蓝灰': 'Rainy Night',

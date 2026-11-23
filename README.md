@@ -11,12 +11,27 @@ Aftertone is a personal music library and player that runs on your computer and 
 - **Library management:** Search by title or artist, read embedded tags and artwork on import, and edit titles, artists, albums, and covers.
 - **Favorites and playlists:** Save favorite tracks and build custom playlists. Start playback from the library, favorites, or a playlist.
 - **Playback controls:** Seek, adjust volume, use Space to play or pause, and switch between sequential playback, repeat-one, and shuffle.
+- **Keyboard shortcuts:** Control playback, skip tracks, seek, adjust volume, and focus search. Press `?` or use the question mark button for bilingual help and a saved on/off preference.
 - **Full-window player:** Click the bottom player’s artwork or title for a focused view with a large cover, playback controls, favorites, and volume. Return with the back button or Escape without interrupting playback or losing your place in the library.
 - **Resume playback:** Reopen Aftertone in the same browser to return to the last track and position. Press Play to continue.
 - **Playback queue:** Choose Play Next from a track’s menu, then open the queue from the bottom player to reorder upcoming songs. Manually queued songs play before the rest of the original library, favorites, or playlist.
 - **Visual themes:** Choose Rainy Night or Forest Green from the theme selector in the header. Your browser remembers the choice, and you can switch while listening.
 - **Interface languages:** Switch between Simplified Chinese and English in the header. The choice is saved in your browser. Playback, searches, queues, and pending imports continue while labels and messages update.
 - **Storage protection:** See how much space your library uses and how much is free. Imports pause when the disk falls below the configured free-space threshold.
+
+## Keyboard shortcuts
+
+| Keys | Action |
+| --- | --- |
+| Space or K | Play / pause |
+| P / N | Previous / next track |
+| J / L | Back / forward 5 seconds |
+| - / + or = | Volume down / up 5% |
+| M | Mute / unmute |
+| / | Focus search and select its current text |
+| ? | Open keyboard help |
+
+Shortcuts are enabled by default. The help panel can disable them and remembers the choice in your browser; its question mark button remains available. Inputs, menus, action dialogs, and native slider navigation retain their own keys. Space activates a focused button normally. Seeking and volume support held keys; toggles and track skips trigger once per press. In Now Playing, `/` returns to the library view before focusing search, while playback continues.
 
 ## How it works
 

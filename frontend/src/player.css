@@ -51,7 +51,7 @@
 .volume-controls .mute-toggle:hover { background: var(--hover-bg); }
 .volume-slider { width: 88px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .player-bar .player-error { grid-column: 1 / -1; }
-@media (max-width: 1360px) {
+@media (max-width: 1440px) {
   .player-bar { grid-template-columns: minmax(0, 1fr) auto; padding: 16px 24px; column-gap: 24px; row-gap: 16px; }
   .player-bar .now-playing { grid-row: 1; grid-column: 1; }
   .player-settings { grid-row: 1; grid-column: 2; }

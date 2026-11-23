@@ -22,6 +22,9 @@ import VolumeControls from './components/VolumeControls.vue'
 import NowPlayingView from './components/NowPlayingView.vue'
 import LanguageSelect from './components/LanguageSelect.vue'
 import { provideI18n, message, fromError, type MessageValue } from './i18n'
+import ShortcutHelpButton from './components/ShortcutHelpButton.vue'
+import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog.vue'
+import { readShortcutsEnabled, saveShortcutsEnabled, shortcutAction } from './utils/keyboardShortcuts'
 
 const { locale, t, text } = provideI18n()
 
@@ -37,6 +40,9 @@ const current = ref<Track>()
 const queueSource = ref<Track>()
 const queueOpen = ref(false)
 const nowPlayingOpen = ref(false)
+const shortcutsOpen = ref(false)
+const shortcutsEnabled = ref(readShortcutsEnabled())
+let searchAfterClose = false
 watch(current, track => { if (!track) nowPlayingOpen.value = false })
 const audio = ref<HTMLAudioElement>()
 const playing = ref(false)
@@ -379,15 +385,56 @@ async function togglePlayback() {
 }
 
 function keyboardPlayback(event: KeyboardEvent) {
-  if ((event.code !== 'Space' && event.key !== ' ') || event.defaultPrevented || event.isComposing
-      || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !current.value) return
+  if (!shortcutsEnabled.value) return
+  const action = shortcutAction(event)
+  if (!action) return
   const target = event.target instanceof Element ? event.target : document.activeElement
-  const modal = document.querySelector('dialog[open]')
-  if (modal && modal.id !== 'now-playing-view' || target?.closest('input:not([type="range"]),textarea,select,[role="textbox"],[contenteditable]:not([contenteditable="false"])')) return
-  const control = target?.closest('button,a,[role="button"],[role="menuitem"]')
-  if (control && !control.matches('.track-button[aria-current="true"]')) return
+  const space = event.key === ' ' || event.code === 'Space'
+  const modal = Array.from(document.querySelectorAll('dialog[open]')).at(-1)
+  if (modal && modal.id !== 'now-playing-view' || document.querySelector('[role="menu"]')) return
+  const editing = space ? 'input:not([type="range"]),textarea,select,[role="textbox"],[role="combobox"],[contenteditable]:not([contenteditable="false"])'
+    : 'input,textarea,select,[role="textbox"],[role="combobox"],[role="slider"],[role="spinbutton"],[contenteditable]:not([contenteditable="false"])'
+  if (target?.closest(editing)) return
+  if (space) {
+    const control = target?.closest('button,a,[role="button"],[role="menuitem"]')
+    if (control && !control.matches('.track-button[aria-current="true"]')) return
+  }
+  if (action !== 'search' && action !== 'help' && !current.value) return
+  if ((action === 'backward' || action === 'forward') && (duration.value <= 0 || pendingSeek)) return
+  if (action === 'previous' && !canPrevious.value || action === 'next' && !canNext.value) return
   event.preventDefault()
-  if (!event.repeat) void togglePlayback()
+  if (event.repeat && !['backward', 'forward', 'quieter', 'louder'].includes(action)) return
+  if (action === 'toggle') void togglePlayback()
+  else if (action === 'previous') adjacent(-1)
+  else if (action === 'next') adjacent(1)
+  else if (action === 'backward' || action === 'forward') seekTo((audio.value?.currentTime ?? playbackTime.value) + (action === 'backward' ? -5 : 5))
+  else if (action === 'quieter' || action === 'louder') {
+    const base = muted.value ? 0 : volume.value
+    setVolume(Math.round(Math.max(0, Math.min(1, base + (action === 'quieter' ? -.05 : .05))) * 100) / 100)
+  } else if (action === 'mute') toggleMute()
+  else if (action === 'help') shortcutsOpen.value = true
+  else focusSearch()
+}
+
+function setShortcutsEnabled(value: boolean) {
+  shortcutsEnabled.value = value
+  saveShortcutsEnabled(value)
+}
+
+function focusSearch() {
+  if (nowPlayingOpen.value) {
+    searchAfterClose = true
+    nowPlayingOpen.value = false
+    return
+  }
+  searchInput.value?.focus()
+  searchInput.value?.select()
+}
+
+function nowPlayingClosed() {
+  if (!searchAfterClose) return
+  searchAfterClose = false
+  focusSearch()
 }
 
 function setVolume(value: number) {
@@ -651,22 +698,24 @@ onBeforeUnmount(() => {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h9M4 20h9m5-5 4 3-4 3z" /></svg>
           <span v-if="hasQueuedTracks" class="queue-count">{{ queuedTracks.length }}</span>
         </button>
+        <ShortcutHelpButton :open="shortcutsOpen" :enabled="shortcutsEnabled" @open="shortcutsOpen = true" />
         <VolumeControls :volume="volume" :muted="muted" @volume="setVolume" @mute="toggleMute" />
       </div>
       <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="!!current && playbackMode === 'repeat-one' && !hasQueuedTracks && (currentIndex >= 0 || manualActive)" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">{{ t('你的浏览器不支持音频播放。') }}</audio>
       <p v-if="playerError" class="player-error" role="alert">{{ text(playerError) }} <button v-if="current" @click="select(current)">{{ t('重试播放') }}</button></p>
     </footer>
-    <NowPlayingView :open="nowPlayingOpen" :track="current" :playing="playing" :buffering="buffering" :time="playbackTime" :duration="duration"
+    <NowPlayingView :open="nowPlayingOpen" :shortcuts-open="shortcutsOpen" :shortcuts-enabled="shortcutsEnabled" :track="current" :playing="playing" :buffering="buffering" :time="playbackTime" :duration="duration"
       :can-previous="canPrevious" :can-next="canNext" :volume="volume" :muted="muted"
       :favorite-busy="!!current && (favoriting.has(current.id) || deleting || renaming || !!pendingDelete || !!pendingRename)"
       :player-error="playerError" :favorite-error="favoriteError" :return-label="view === 'favorites' ? t('返回收藏') : selectedPlaylist ? t('返回歌单') : t('返回曲库')"
-      @close="nowPlayingOpen = false" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo"
+      @close="nowPlayingOpen = false" @closed="nowPlayingClosed" @shortcuts="shortcutsOpen = true" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo"
       @favorite="current && toggleFavorite(current)" @volume="setVolume" @mute="toggleMute" @retry="current && select(current)" />
     <PlaybackQueuePanel :open="queueOpen" :current="current" :queued="queuedTracks" :upcoming="sourceTracks" :source-title="queueTitle" :mode="playbackMode"
       @close="queueOpen = false" @move="moveTrack" @remove="removeQueued" />
     <DeleteTrackDialog :track="pendingDelete" :busy="deleting" :error="deleteError" :is-current="pendingDelete?.id === current?.id" @cancel="pendingDelete = undefined" @confirm="confirmDelete" />
     <RenameTrackDialog :track="pendingRename" :busy="renaming" :error="renameError" @cancel="pendingRename = undefined" @save="saveRename" />
     <PlaylistDialog :prompt="playlistPrompt" :playlists="playlists" :busy="playlistBusy" :error="playlistError" @cancel="playlistPrompt = undefined; playlistError = ''" @name="savePlaylistName" @add="addTrackToPlaylist" @delete="confirmPlaylistDeletion" />
+    <KeyboardShortcutsDialog :open="shortcutsOpen" :enabled="shortcutsEnabled" @close="shortcutsOpen = false" @enabled="setShortcutsEnabled" />
   </div>
 </template>
 

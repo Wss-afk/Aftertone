@@ -24,6 +24,7 @@
 .now-playing-topbar .now-playing-back { justify-self: start; min-height: 46px; padding: 10px 24px; border: 1px solid var(--control-line); border-radius: 7px; font-size: 16px; }
 .now-playing-back:hover { background: var(--hover-bg); }
 .now-playing-topbar h2 { font-size: 22px; font-weight: 500; letter-spacing: .04em; }
+.now-playing-topbar .shortcuts-toggle { justify-self: end; }
 .now-playing-stage { display: flex; flex-direction: column; align-items: center; width: 100%; margin: 63px auto 0; }
 .now-playing-artwork { display: grid; place-items: center; flex: none; width: min(47vh, 500px, 72vw); aspect-ratio: 1; border: 1px solid var(--artwork-line); border-radius: 9px; background: var(--artwork-bg); color: var(--artwork-ink); font-size: clamp(80px, 14vh, 160px); box-shadow: 0 20px 60px var(--shadow-medium); }
 .now-playing-information { max-width: min(940px, 100%); margin-top: 30px; text-align: center; }

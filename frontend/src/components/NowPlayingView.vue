@@ -6,30 +6,28 @@ import TrackArtwork from './TrackArtwork.vue'
 import PlayerControls from './PlayerControls.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import VolumeControls from './VolumeControls.vue'
+import ShortcutHelpButton from './ShortcutHelpButton.vue'
+import { lockPageScroll } from '../utils/pageScrollLock'
 
 const { t, text } = useI18n()
 
 const props = defineProps<{
-  open: boolean; track?: Track; playing: boolean; buffering: boolean; time: number; duration: number
+  open: boolean; shortcutsOpen?: boolean; shortcutsEnabled?: boolean; track?: Track; playing: boolean; buffering: boolean; time: number; duration: number
   canPrevious: boolean; canNext: boolean; volume: number; muted: boolean; favoriteBusy: boolean
   playerError: MessageValue; favoriteError: MessageValue; returnLabel: string
 }>()
 const emit = defineEmits<{
-  close: []; toggle: []; previous: []; next: []; seek: [value: number]
+  close: []; closed: []; shortcuts: []; toggle: []; previous: []; next: []; seek: [value: number]
   favorite: []; volume: [value: number]; mute: []; retry: []
 }>()
 const dialog = ref<HTMLDialogElement>()
 const rendered = ref(false)
 let returnFocus: HTMLElement | undefined
-let scrollPosition: { x: number; y: number; overflow: string } | undefined
+let releaseScroll: (() => void) | undefined
 
 function restorePage() {
-  if (!scrollPosition) return
-  document.documentElement.style.overflow = scrollPosition.overflow
-  if (window.scrollX !== scrollPosition.x || window.scrollY !== scrollPosition.y) {
-    window.scrollTo(scrollPosition.x, scrollPosition.y)
-  }
-  scrollPosition = undefined
+  releaseScroll?.()
+  releaseScroll = undefined
   if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true })
   returnFocus = undefined
 }
@@ -39,6 +37,7 @@ function finishClose() {
   if (dialog.value?.open) dialog.value.close()
   rendered.value = false
   restorePage()
+  emit('closed')
 }
 
 watch(() => props.open, async open => {
@@ -47,8 +46,7 @@ watch(() => props.open, async open => {
   await nextTick()
   if (!props.open || !dialog.value || dialog.value.open) return
   returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
-  scrollPosition = { x: window.scrollX, y: window.scrollY, overflow: document.documentElement.style.overflow }
-  document.documentElement.style.overflow = 'hidden'
+  releaseScroll = lockPageScroll()
   dialog.value.showModal()
 }, { flush: 'post' })
 
@@ -66,6 +64,7 @@ onBeforeUnmount(() => {
         <header class="now-playing-topbar">
           <button type="button" class="now-playing-back" autofocus @click="emit('close')">{{ returnLabel }}</button>
           <h2 id="now-playing-heading">{{ t('正在播放') }}</h2>
+          <ShortcutHelpButton :open="!!shortcutsOpen" :enabled="shortcutsEnabled" @open="emit('shortcuts')" />
         </header>
         <div class="now-playing-stage">
           <TrackArtwork class="now-playing-artwork" :url="track.coverUrl" />
