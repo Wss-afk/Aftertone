@@ -1,12 +1,13 @@
 import { ref } from 'vue'
 import { deletePlaylist, listPlaylists, type Playlist } from '../api/playlists'
+import { fromError, type MessageValue } from '../i18n'
 
 export function usePlaylists() {
   const playlists = ref<Playlist[]>([])
   const loading = ref(true)
-  const loadError = ref('')
+  const loadError = ref<MessageValue>('')
   const busy = ref(false)
-  const error = ref('')
+  const error = ref<MessageValue>('')
   let request = 0
 
   async function refresh() {
@@ -18,7 +19,7 @@ export function usePlaylists() {
       const result = await listPlaylists()
       if (version === request) playlists.value = result
     } catch (cause) {
-      if (version === request) loadError.value = cause instanceof Error ? cause.message : '歌单读取失败，请重试。'
+      if (version === request) loadError.value = fromError(cause, '歌单读取失败，请重试。')
     } finally {
       if (version === request) loading.value = false
     }
@@ -35,7 +36,7 @@ export function usePlaylists() {
       apply(updated)
       return updated
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '歌单保存失败，请重试。'
+      error.value = fromError(cause, '歌单保存失败，请重试。')
     } finally { busy.value = false }
   }
 

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from '../i18n'
 import { computed, ref, watch } from 'vue'
 import { formatDuration as formatTime } from '../utils/duration'
+
+const { t } = useI18n()
 
 const props = defineProps<{ trackId?: number; time: number; duration: number }>()
 const emit = defineEmits<{ seek: [time: number] }>()
@@ -28,7 +31,7 @@ watch(() => props.trackId, () => { dragging.value = false; seekTrack = undefined
 <template>
   <div class="seek-row">
     <span class="time-elapsed">{{ formatTime(displayTime) }}</span>
-    <input class="seek-slider" type="range" min="0" :max="ready ? duration : 1" step="0.1" :value="ready ? displayTime : 0" :disabled="!ready" :style="{ '--seek-fill': `${progress}%` }" aria-label="播放进度" :aria-valuetext="`${formatTime(displayTime)} / ${formatTime(duration)}`" @input="preview" @change="commit" @pointercancel="dragging = false; seekTrack = undefined" />
+    <input class="seek-slider" type="range" min="0" :max="ready ? duration : 1" step="0.1" :value="ready ? displayTime : 0" :disabled="!ready" :style="{ '--seek-fill': `${progress}%` }" :aria-label="t('播放进度')" :aria-valuetext="`${formatTime(displayTime)} / ${formatTime(duration)}`" @input="preview" @change="commit" @pointercancel="dragging = false; seekTrack = undefined" />
     <span class="time-total">{{ formatTime(duration) }}</span>
   </div>
 </template>

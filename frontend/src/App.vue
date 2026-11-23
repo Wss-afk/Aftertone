@@ -20,6 +20,10 @@ import PlaybackQueuePanel from './components/PlaybackQueuePanel.vue'
 import ThemeSelect from './components/ThemeSelect.vue'
 import VolumeControls from './components/VolumeControls.vue'
 import NowPlayingView from './components/NowPlayingView.vue'
+import LanguageSelect from './components/LanguageSelect.vue'
+import { provideI18n, message, fromError, type MessageValue } from './i18n'
+
+const { locale, t, text } = provideI18n()
 
 type LibraryView = 'library' | 'favorites' | number
 type PlaylistPrompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
@@ -27,8 +31,8 @@ const appName = 'Aftertone'
 
 const tracks = ref<Track[]>([])
 const loading = ref(true)
-const listError = ref('')
-const playerError = ref('')
+const listError = ref<MessageValue>('')
+const playerError = ref<MessageValue>('')
 const current = ref<Track>()
 const queueSource = ref<Track>()
 const queueOpen = ref(false)
@@ -48,14 +52,14 @@ const muted = ref(false)
 let audibleVolume = 1
 const pendingDelete = ref<Track>()
 const deleting = ref(false)
-const deleteError = ref('')
+const deleteError = ref<MessageValue>('')
 const pendingRename = ref<Track>()
 const renaming = ref(false)
-const renameError = ref('')
-const notice = ref('')
+const renameError = ref<MessageValue>('')
+const notice = ref<MessageValue>('')
 const capacity = ref<StorageStatus>()
 const capacityLoading = ref(true)
-const capacityError = ref('')
+const capacityError = ref<MessageValue>('')
 const searchQuery = ref('')
 const searchInput = ref<HTMLInputElement>()
 const view = ref<LibraryView>('library')
@@ -75,7 +79,7 @@ watch(() => queuePlaylist.value?.entries.find(entry => entry.trackId === queueSo
   if (position !== undefined) playlistPosition.value = position
 }, { flush: 'sync' })
 const favoriting = ref(new Set<number>())
-const favoriteError = ref('')
+const favoriteError = ref<MessageValue>('')
 const favoriteTracks = computed(() => tracks.value.filter(track => track.favorite))
 const tracksById = computed(() => new Map(tracks.value.map(track => [track.id, track])))
 const viewTracks = computed(() => {
@@ -96,12 +100,17 @@ const queueTracks = computed(() => {
   }
   return queue
 })
-const viewTitle = computed(() => view.value === 'favorites' ? '我喜欢的音乐' : selectedPlaylist.value?.name ?? '我的曲库')
+const viewTitle = computed(() => view.value === 'favorites' ? t('我喜欢的音乐') : selectedPlaylist.value?.name ?? t('我的曲库'))
+watch([viewTitle, locale], () => {
+  document.documentElement.lang = locale.value
+  document.title = `${appName} · ${viewTitle.value}`
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('Aftertone，你的私人音乐曲库。上传音频，自动处理格式，保存并聆听自己的音乐。'))
+}, { immediate: true })
 const normalizeSearch = (value: string) => value.normalize('NFKC').toLowerCase().trim()
 const searchTerms = computed(() => normalizeSearch(searchQuery.value).split(/\s+/u).filter(Boolean))
 const searching = computed(() => searchTerms.value.length > 0)
 const visibleTracks = computed(() => searching.value ? viewTracks.value.filter(track => {
-  const information = normalizeSearch(`${track.title} ${track.artist || '未知歌手'}`)
+  const information = normalizeSearch(`${track.title} ${track.artist || '未知歌手 Unknown artist'}`)
   return searchTerms.value.every(term => information.includes(term))
 }) : viewTracks.value)
 let capacityRequest = 0
@@ -111,22 +120,22 @@ const {
   mode: playbackMode, currentIndex, canPrevious, canNext, recordSelection, step, resetHistory, resetQueue,
   queuedTracks, sourceTracks, hasQueuedTracks, manualActive, enqueueNext, moveTrack, removeQueued, prepareUpcoming,
 } = usePlaybackQueue(queueTracks, current, queueSource, tracks)
-const queueTitle = computed(() => queueScope.value === 'favorites' ? '我喜欢的音乐'
-  : typeof queueScope.value === 'number' ? queuePlaylist.value?.name ?? '原歌单' : '我的曲库')
+const queueTitle = computed(() => queueScope.value === 'favorites' ? t('我喜欢的音乐')
+  : typeof queueScope.value === 'number' ? queuePlaylist.value?.name ?? t('原歌单') : t('我的曲库'))
 watch([queueOpen, playbackMode, current, queueTracks], () => { if (queueOpen.value) prepareUpcoming() })
 const libraryNote = computed(() => {
-  if (!tracks.value.length) return '你的音乐保存在这台电脑上。'
-  if (queuePlaylist.value && current.value) return `正在播放歌单「${queuePlaylist.value.name}」。切换页面和搜索不会改变当前播放队列。`
-  if (typeof queueScope.value === 'number' && current.value) return '当前歌曲可继续播放。重新点歌后按所选列表播放。'
+  if (!tracks.value.length) return t('你的音乐保存在这台电脑上。')
+  if (queuePlaylist.value && current.value) return t('正在播放歌单「{name}」。切换页面和搜索不会改变当前播放队列。', { name: queuePlaylist.value.name })
+  if (typeof queueScope.value === 'number' && current.value) return t('当前歌曲可继续播放。重新点歌后按所选列表播放。')
   if (queueScope.value === 'favorites' && current.value) {
-    const mode = playbackMode.value === 'shuffle' ? '随机播放' : playbackMode.value === 'repeat-one' ? '单曲循环' : '顺序播放'
-    return `正在按“我喜欢的音乐”${mode}。切换页面和搜索不会改变当前播放队列。`
+    const mode = t(playbackMode.value === 'shuffle' ? '随机播放' : playbackMode.value === 'repeat-one' ? '单曲循环' : '顺序播放')
+    return t('正在按“我喜欢的音乐”{mode}。切换页面和搜索不会改变当前播放队列。', { mode })
   }
-  if (view.value === 'favorites') return '点歌后按收藏列表播放；取消收藏不会打断正在播放的歌曲。'
-  if (selectedPlaylist.value) return '从这里点歌后，按歌单顺序播放。'
-  if (playbackMode.value === 'shuffle') return searching.value ? '搜索只筛选列表，随机播放仍从完整曲库选歌。' : '随机播放会避开当前歌曲，上一首返回播放历史。'
-  if (playbackMode.value === 'repeat-one') return searching.value ? '搜索只筛选列表，当前歌曲会单曲循环。' : '单曲循环当前歌曲，手动切歌仍按最近上传顺序。'
-  return searching.value ? '搜索只筛选列表，播放队列仍按最近上传排列。' : '从上到下，就是今晚的播放顺序。'
+  if (view.value === 'favorites') return t('点歌后按收藏列表播放；取消收藏不会打断正在播放的歌曲。')
+  if (selectedPlaylist.value) return t('从这里点歌后，按歌单顺序播放。')
+  if (playbackMode.value === 'shuffle') return t(searching.value ? '搜索只筛选列表，随机播放仍从完整曲库选歌。' : '随机播放会避开当前歌曲，上一首返回播放历史。')
+  if (playbackMode.value === 'repeat-one') return t(searching.value ? '搜索只筛选列表，当前歌曲会单曲循环。' : '单曲循环当前歌曲，手动切歌仍按最近上传顺序。')
+  return t(searching.value ? '搜索只筛选列表，播放队列仍按最近上传排列。' : '从上到下，就是今晚的播放顺序。')
 })
 
 function changeView(value: LibraryView) {
@@ -156,7 +165,7 @@ async function savePlaylistName(name: string) {
   if (!saved) return
   playlistPrompt.value = undefined
   if (prompt.kind === 'create') changeView(saved.id)
-  notice.value = prompt.kind === 'create' ? `已新建歌单「${saved.name}」。` : `已改名为「${saved.name}」。`
+  notice.value = message(prompt.kind === 'create' ? '已新建歌单「{name}」。' : '已改名为「{name}」。', { name: saved.name })
 }
 
 async function addTrackToPlaylist(id: number) {
@@ -165,7 +174,7 @@ async function addTrackToPlaylist(id: number) {
   const saved = await savePlaylist(() => addToPlaylist(id, prompt.track.id))
   if (!saved) return
   playlistPrompt.value = undefined
-  notice.value = `已将「${prompt.track.title}」加入「${saved.name}」。`
+  notice.value = message('已将「{title}」加入「{name}」。', { title: prompt.track.title, name: saved.name })
 }
 
 async function removeTrackFromPlaylist(track: Track) {
@@ -174,7 +183,7 @@ async function removeTrackFromPlaylist(track: Track) {
   notice.value = ''
   const saved = await savePlaylist(() => removeFromPlaylist(playlist.id, track.id))
   if (!saved) return
-  notice.value = `已从「${saved.name}」移出「${track.title}」。`
+  notice.value = message('已从「{name}」移出「{title}」。', { name: saved.name, title: track.title })
   if (view.value === playlist.id) {
     await nextTick()
     if (document.activeElement === document.body) searchInput.value?.focus()
@@ -189,7 +198,7 @@ async function confirmPlaylistDeletion() {
   if (await removePlaylist(id) === undefined) return
   playlistPrompt.value = undefined
   if (view.value === id) changeView('library')
-  notice.value = `已删除歌单「${name}」。`
+  notice.value = message('已删除歌单「{name}」。', { name })
   if (wasViewingPlaylist && view.value === 'library') {
     await nextTick()
     searchInput.value?.focus()
@@ -216,7 +225,7 @@ async function refresh() {
       restorePlaybackPosition()
     }
   }
-  catch (error) { if (request === listRequest) listError.value = error instanceof Error ? error.message : '曲库加载失败，请重试。' }
+  catch (error) { if (request === listRequest) listError.value = fromError(error, '曲库加载失败，请重试。') }
   finally { if (request === listRequest) loading.value = false }
 }
 
@@ -233,9 +242,9 @@ async function toggleFavorite(track: Track) {
     loading.value = false
     tracks.value = tracks.value.map(item => item.id === updated.id ? { ...item, favorite: updated.favorite } : item)
     if (current.value?.id === updated.id) current.value = { ...current.value, favorite: updated.favorite }
-    notice.value = updated.favorite ? `已收藏「${track.title}」。` : `已取消「${track.title}」的收藏，歌曲仍保留在曲库。`
+    notice.value = message(updated.favorite ? '已收藏「{title}」。' : '已取消「{title}」的收藏，歌曲仍保留在曲库。', { title: track.title })
   } catch (error) {
-    favoriteError.value = error instanceof Error ? error.message : '收藏状态保存失败，请重试。'
+    favoriteError.value = fromError(error, '收藏状态保存失败，请重试。')
   } finally { favoriting.value.delete(track.id) }
 }
 
@@ -253,7 +262,7 @@ function selectFromView(track: Track) {
 function playNext(track: Track) {
   if (!current.value) { selectFromView(track); return }
   enqueueNext(track)
-  notice.value = `「${track.title}」将下一首播放。`
+  notice.value = message('「{title}」将下一首播放。', { title: track.title })
 }
 
 async function refreshCapacity() {
@@ -261,7 +270,7 @@ async function refreshCapacity() {
   capacityLoading.value = true
   capacityError.value = ''
   try { const value = await getStorageStatus(); if (request === capacityRequest) capacity.value = value }
-  catch (error) { if (request === capacityRequest) capacityError.value = error instanceof Error ? error.message : '容量信息暂不可用，请重试。' }
+  catch (error) { if (request === capacityRequest) capacityError.value = fromError(error, '容量信息暂不可用，请重试。') }
   finally { if (request === capacityRequest) capacityLoading.value = false }
 }
 
@@ -460,9 +469,9 @@ async function saveRename(title: string, artist: string, album: string, cover?: 
     tracks.value = tracks.value.map(item => item.id === updated.id ? updated : item)
     if (current.value?.id === updated.id) current.value = { ...current.value, title: updated.title, artist: updated.artist, album: updated.album, coverUrl: updated.coverUrl, durationSeconds: updated.durationSeconds, favorite: updated.favorite }
     pendingRename.value = undefined
-    notice.value = `已更新「${updated.title}」的歌曲信息。`
+    notice.value = message('已更新「{title}」的歌曲信息。', { title: updated.title })
   } catch (error) {
-    renameError.value = error instanceof Error ? error.message : '歌曲信息保存失败，请重试。'
+    renameError.value = fromError(error, '歌曲信息保存失败，请重试。')
   } finally { renaming.value = false }
 }
 
@@ -497,11 +506,11 @@ async function confirmDelete() {
     tracks.value = tracks.value.filter(item => item.id !== track.id)
     listError.value = ''
     pendingDelete.value = undefined
-    notice.value = `已删除「${track.title}」。`
+    notice.value = message('已删除「{title}」。', { title: track.title })
     void refreshCapacity()
     void refreshPlaylists()
   } catch (error) {
-    deleteError.value = error instanceof Error ? error.message : '删除失败，请重试。'
+    deleteError.value = fromError(error, '删除失败，请重试。')
     if (snapshot && request === playRequest && !current.value) {
       pendingSeek = snapshot.seek
       current.value = snapshot.track
@@ -539,28 +548,28 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell">
     <aside class="sidebar">
-      <a class="brand" href="/" :aria-label="`${appName} 首页`">
+      <a class="brand" href="/" :aria-label="t('{app} 首页', { app: appName })">
         <span class="brand-mark" aria-hidden="true">◒</span>
         <span lang="en"><span class="brand-name">{{ appName }}</span><small>LOCAL MUSIC</small></span>
       </a>
-      <nav class="library-navigation" aria-label="音乐导航">
-        <button class="nav-item" :class="{ active: view === 'library' }" :aria-current="view === 'library' ? 'page' : undefined" @click="changeView('library')"><span aria-hidden="true">▤</span> 我的曲库 <span class="nav-dot" v-if="view === 'library'"></span></button>
-        <button class="nav-item" :class="{ active: view === 'favorites' }" :aria-current="view === 'favorites' ? 'page' : undefined" @click="changeView('favorites')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.7 4.9a5.3 5.3 0 0 0-7.5 0L12 6.1l-1.2-1.2a5.3 5.3 0 0 0-7.5 7.5L12 21l8.7-8.6a5.3 5.3 0 0 0 0-7.5Z" /></svg> 我喜欢的音乐 <span class="favorite-count" aria-hidden="true">{{ favoriteTracks.length }}</span></button>
+      <nav class="library-navigation" :aria-label="t('音乐导航')">
+        <button class="nav-item" :class="{ active: view === 'library' }" :aria-current="view === 'library' ? 'page' : undefined" @click="changeView('library')"><span aria-hidden="true">▤</span> {{ t('我的曲库') }} <span class="nav-dot" v-if="view === 'library'"></span></button>
+        <button class="nav-item" :class="{ active: view === 'favorites' }" :aria-current="view === 'favorites' ? 'page' : undefined" @click="changeView('favorites')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.7 4.9a5.3 5.3 0 0 0-7.5 0L12 6.1l-1.2-1.2a5.3 5.3 0 0 0-7.5 7.5L12 21l8.7-8.6a5.3 5.3 0 0 0 0-7.5Z" /></svg> {{ t('我喜欢的音乐') }} <span class="favorite-count" aria-hidden="true">{{ favoriteTracks.length }}</span></button>
       </nav>
       <section class="playlist-navigation" aria-labelledby="playlist-navigation-title">
         <div class="playlist-navigation-heading">
-          <h2 id="playlist-navigation-title">歌单</h2>
-          <button type="button" class="text-button playlist-create" :disabled="playlistBusy || playlistsLoading" @click="openPlaylistPrompt({ kind: 'create' })">＋ 新建歌单</button>
+          <h2 id="playlist-navigation-title">{{ t('歌单') }}</h2>
+          <button type="button" class="text-button playlist-create" :disabled="playlistBusy || playlistsLoading" @click="openPlaylistPrompt({ kind: 'create' })">{{ t('＋ 新建歌单') }}</button>
         </div>
-        <p v-if="playlistsLoadError" class="playlist-load-error" role="status">{{ playlistsLoadError }} <button type="button" @click="refreshPlaylists">重试</button></p>
-        <p v-else-if="playlistsLoading && !playlists.length" class="playlist-load-error">正在读取歌单…</p>
-        <nav v-if="playlists.length" aria-label="歌单列表">
+        <p v-if="playlistsLoadError" class="playlist-load-error" role="status">{{ text(playlistsLoadError) }} <button type="button" @click="refreshPlaylists">{{ t('重试') }}</button></p>
+        <p v-else-if="playlistsLoading && !playlists.length" class="playlist-load-error">{{ t('正在读取歌单…') }}</p>
+        <nav v-if="playlists.length" :aria-label="t('歌单列表')">
           <button v-for="playlist in playlists" :key="playlist.id" type="button" class="nav-item playlist-nav-item" :class="{ active: view === playlist.id }" :aria-current="view === playlist.id ? 'page' : undefined" :title="playlist.name" @click="changeView(playlist.id)">
             <span class="playlist-nav-name">{{ playlist.name }}</span><span class="favorite-count" aria-hidden="true">{{ playlist.entries.filter(entry => tracksById.has(entry.trackId)).length }}</span>
           </button>
         </nav>
       </section>
-      <div class="sidebar-bottom"><span class="connection-dot"></span> 本机曲库<small>让每一次聆听，都有归处。</small></div>
+      <div class="sidebar-bottom"><span class="connection-dot"></span> {{ t('本机曲库') }}<small>{{ t('让每一次聆听，都有归处。') }}</small></div>
     </aside>
 
     <main>
@@ -568,58 +577,58 @@ onBeforeUnmount(() => {
         <header class="library-heading">
           <div class="library-title-group">
             <h1 id="library-title">{{ viewTitle }}</h1>
-            <div class="library-count"><strong>{{ viewTracks.length }}</strong><span>{{ view === 'favorites' ? '首收藏' : '首歌曲' }}</span></div>
+            <div class="library-count"><strong>{{ viewTracks.length }}</strong><span>{{ t(view === 'favorites' ? '首收藏' : '首歌曲', { count: viewTracks.length }) }}</span></div>
           </div>
-          <ThemeSelect />
+          <div class="library-preferences"><ThemeSelect /><LanguageSelect /></div>
         </header>
         <UploadPanel v-show="view === 'library'" :blocked="capacity?.uploadAllowed === false" @uploaded="refresh" @storage-change="refreshCapacity" />
-        <form class="library-search" role="search" aria-label="曲库搜索" @submit.prevent>
-          <label class="visually-hidden" for="track-search">搜索歌名或歌手</label>
+        <form class="library-search" role="search" :aria-label="t('曲库搜索')" @submit.prevent>
+          <label class="visually-hidden" for="track-search">{{ t('搜索歌名或歌手') }}</label>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
-          <input id="track-search" ref="searchInput" v-model="searchQuery" type="search" :placeholder="view === 'favorites' ? '搜索收藏的歌名或歌手' : '搜索歌名或歌手'" autocomplete="off" aria-controls="track-results" aria-describedby="search-summary" @keydown.esc.prevent="clearSearch" />
-          <button v-if="searchQuery" type="button" class="search-clear" aria-label="清空搜索" title="清空搜索" @click="clearSearch">
+          <input id="track-search" ref="searchInput" v-model="searchQuery" type="search" :placeholder="view === 'favorites' ? t('搜索收藏的歌名或歌手') : t('搜索歌名或歌手')" autocomplete="off" aria-controls="track-results" aria-describedby="search-summary" @keydown.esc.prevent="clearSearch" />
+          <button v-if="searchQuery" type="button" class="search-clear" :aria-label="t('清空搜索')" :title="t('清空搜索')" @click="clearSearch">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
         </form>
-        <p id="search-summary" class="search-summary" :class="{ 'visually-hidden': !searching && !listError && (!loading || tracks.length > 0) }" role="status">{{ listError ? '曲库读取失败，请重试。' : loading && !tracks.length ? '正在读取曲库…' : searching ? `找到 ${visibleTracks.length} 首，共 ${viewTracks.length} 首` : view === 'favorites' ? `已收藏 ${favoriteTracks.length} 首歌曲` : `共 ${viewTracks.length} 首歌曲` }}</p>
+        <p id="search-summary" class="search-summary" :class="{ 'visually-hidden': !searching && !listError && (!loading || tracks.length > 0) }" role="status">{{ listError ? t('曲库读取失败，请重试。') : loading && !tracks.length ? t('正在读取曲库…') : searching ? t('找到 {count} 首，共 {total} 首', { count: visibleTracks.length, total: viewTracks.length }) : view === 'favorites' ? t('已收藏 {count} 首歌曲', { count: favoriteTracks.length }) : t('共 {count} 首歌曲', { count: viewTracks.length }) }}</p>
         <div class="list-heading">
-          <h2>{{ searching ? '搜索结果' : view === 'favorites' ? '已收藏' : selectedPlaylist ? '歌单曲目' : '最近上传' }}</h2>
+          <h2>{{ searching ? t('搜索结果') : view === 'favorites' ? t('已收藏') : selectedPlaylist ? t('歌单曲目') : t('最近上传') }}</h2>
           <div class="playlist-view-actions">
-            <button v-if="selectedPlaylist" type="button" class="text-button" :disabled="playlistBusy" @click="openPlaylistPrompt({ kind: 'rename', playlist: selectedPlaylist })">修改歌单名称</button>
-            <button v-if="selectedPlaylist" type="button" class="text-button playlist-delete" :disabled="playlistBusy" aria-haspopup="dialog" @click="openPlaylistPrompt({ kind: 'delete', playlist: selectedPlaylist })">删除歌单</button>
-            <button class="text-button" @click="refreshVisible" :disabled="loading">{{ loading ? '加载中…' : '刷新曲库 ↻' }}</button>
+            <button v-if="selectedPlaylist" type="button" class="text-button" :disabled="playlistBusy" @click="openPlaylistPrompt({ kind: 'rename', playlist: selectedPlaylist })">{{ t('修改歌单名称') }}</button>
+            <button v-if="selectedPlaylist" type="button" class="text-button playlist-delete" :disabled="playlistBusy" aria-haspopup="dialog" @click="openPlaylistPrompt({ kind: 'delete', playlist: selectedPlaylist })">{{ t('删除歌单') }}</button>
+            <button class="text-button" @click="refreshVisible" :disabled="loading">{{ loading ? t('加载中…') : t('刷新曲库 ↻') }}</button>
           </div>
         </div>
         <div id="track-results">
-        <p v-if="listError" class="state error" role="alert">{{ listError }} <button @click="refresh">重试</button></p>
-        <p v-else-if="loading && !tracks.length" class="state" role="status">正在连接你的曲库…</p>
-        <div v-else-if="view === 'favorites' && !favoriteTracks.length" class="empty-state favorites-empty"><span aria-hidden="true">♡</span><h3>还没有收藏的音乐</h3><p>在歌曲旁点亮爱心，就能在这里找到它。</p><button type="button" class="search-reset" @click="changeView('library')">去曲库选歌</button></div>
-        <div v-else-if="selectedPlaylist && !viewTracks.length" class="empty-state favorites-empty"><span aria-hidden="true">♫</span><h3>这个歌单还是空的</h3><p>从曲库选一首歌，再用底部播放器的「加入歌单」。</p><button type="button" class="search-reset" @click="changeView('library')">去曲库选歌</button></div>
-        <div v-else-if="!tracks.length" class="empty-state"><span aria-hidden="true">♫</span><h3>第一首，留给你喜欢的歌。</h3><p>上传第一首音频，然后从曲库开始播放。</p></div>
-        <div v-else-if="!visibleTracks.length" class="empty-state search-empty"><span aria-hidden="true">⌕</span><h3>没有匹配的歌曲</h3><p>{{ view === 'favorites' ? '换个歌名或歌手试试，或者清空搜索查看全部收藏。' : selectedPlaylist ? '换个歌名或歌手试试，或者清空搜索查看整个歌单。' : '换个歌名或歌手试试，或者清空搜索查看全部曲库。' }}</p><button type="button" class="search-reset" @click="clearSearch">{{ view === 'favorites' ? '查看全部收藏' : '查看全部歌曲' }}</button></div>
-        <TrackList v-else :tracks="visibleTracks" :label="searching ? '搜索结果' : view === 'library' ? '最近上传的歌曲' : viewTitle" :current-id="current?.id" :playing="playing" :deleting="deleting || renaming || playlistBusy" :favoriting="favoriting" :in-playlist="!!selectedPlaylist"
+        <p v-if="listError" class="state error" role="alert">{{ text(listError) }} <button @click="refresh">{{ t('重试') }}</button></p>
+        <p v-else-if="loading && !tracks.length" class="state" role="status">{{ t('正在连接你的曲库…') }}</p>
+        <div v-else-if="view === 'favorites' && !favoriteTracks.length" class="empty-state favorites-empty"><span aria-hidden="true">♡</span><h3>{{ t('还没有收藏的音乐') }}</h3><p>{{ t('在歌曲旁点亮爱心，就能在这里找到它。') }}</p><button type="button" class="search-reset" @click="changeView('library')">{{ t('去曲库选歌') }}</button></div>
+        <div v-else-if="selectedPlaylist && !viewTracks.length" class="empty-state favorites-empty"><span aria-hidden="true">♫</span><h3>{{ t('这个歌单还是空的') }}</h3><p>{{ t('从曲库选一首歌，再用底部播放器的「加入歌单」。') }}</p><button type="button" class="search-reset" @click="changeView('library')">{{ t('去曲库选歌') }}</button></div>
+        <div v-else-if="!tracks.length" class="empty-state"><span aria-hidden="true">♫</span><h3>{{ t('第一首，留给你喜欢的歌。') }}</h3><p>{{ t('上传第一首音频，然后从曲库开始播放。') }}</p></div>
+        <div v-else-if="!visibleTracks.length" class="empty-state search-empty"><span aria-hidden="true">⌕</span><h3>{{ t('没有匹配的歌曲') }}</h3><p>{{ view === 'favorites' ? t('换个歌名或歌手试试，或者清空搜索查看全部收藏。') : selectedPlaylist ? t('换个歌名或歌手试试，或者清空搜索查看整个歌单。') : t('换个歌名或歌手试试，或者清空搜索查看全部曲库。') }}</p><button type="button" class="search-reset" @click="clearSearch">{{ view === 'favorites' ? t('查看全部收藏') : t('查看全部歌曲') }}</button></div>
+        <TrackList v-else :tracks="visibleTracks" :label="searching ? t('搜索结果') : view === 'library' ? t('最近上传的歌曲') : viewTitle" :current-id="current?.id" :playing="playing" :deleting="deleting || renaming || playlistBusy" :favoriting="favoriting" :in-playlist="!!selectedPlaylist"
           @select="selectFromView" @delete="requestDelete" @rename="requestRename" @favorite="toggleFavorite" @remove-from-playlist="removeTrackFromPlaylist" @play-next="playNext" />
         </div>
-        <p v-if="notice" class="library-notice success" role="status">{{ notice }}</p>
-        <p v-if="favoriteError" class="favorite-error error" role="alert">{{ favoriteError }} <button type="button" @click="refresh">刷新曲库</button></p>
-        <p v-if="playlistError && !playlistPrompt" class="favorite-error error" role="alert">{{ playlistError }}</p>
+        <p v-if="notice" class="library-notice success" role="status">{{ text(notice) }}</p>
+        <p v-if="favoriteError" class="favorite-error error" role="alert">{{ text(favoriteError) }} <button type="button" @click="refresh">{{ t('刷新曲库') }}</button></p>
+        <p v-if="playlistError && !playlistPrompt" class="favorite-error error" role="alert">{{ text(playlistError) }}</p>
         <p class="library-note">{{ libraryNote }}</p>
         <StorageStatusPanel v-if="view === 'library'" :capacity="capacity" :loading="capacityLoading" :error="capacityError" @refresh="refreshCapacity" />
       </section>
     </main>
 
-    <footer class="player-bar" aria-label="音乐播放器">
+    <footer class="player-bar" :aria-label="t('音乐播放器')">
       <div class="now-playing">
-        <button type="button" class="now-playing-art-button" :disabled="!current" :aria-label="current ? `展开正在播放：${current.title}` : '展开正在播放'" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true">
+        <button type="button" class="now-playing-art-button" :disabled="!current" :aria-label="current ? t('展开正在播放：{title}', { title: current.title }) : t('展开正在播放')" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true">
           <TrackArtwork class="player-art" :class="{ active: playing }" :url="current?.coverUrl" />
         </button>
         <div class="now-playing-copy">
           <div class="now-playing-title">
-            <button v-if="current" type="button" class="now-playing-title-button" :aria-label="`展开正在播放：${current.title}`" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true"><strong :title="current.title">{{ current.title }}</strong></button>
-            <strong v-else>还没有正在播放的音乐</strong>
-            <div v-if="current" class="now-playing-actions" role="group" aria-label="当前歌曲操作">
+            <button v-if="current" type="button" class="now-playing-title-button" :aria-label="t('展开正在播放：{title}', { title: current.title })" aria-haspopup="dialog" aria-controls="now-playing-view" :aria-expanded="nowPlayingOpen" @click="nowPlayingOpen = true"><strong :title="current.title">{{ current.title }}</strong></button>
+            <strong v-else>{{ t('还没有正在播放的音乐') }}</strong>
+            <div v-if="current" class="now-playing-actions" role="group" :aria-label="t('当前歌曲操作')">
               <FavoriteButton :title="current.title" :favorite="current.favorite" :busy="favoriting.has(current.id) || deleting || renaming || !!pendingDelete || !!pendingRename" @toggle="toggleFavorite(current)" />
-              <button class="playlist-add-button" type="button" aria-label="将当前歌曲加入歌单" title="加入歌单" aria-haspopup="dialog"
+              <button class="playlist-add-button" type="button" :aria-label="t('将当前歌曲加入歌单')" :title="t('加入歌单')" aria-haspopup="dialog"
                 :disabled="playlistBusy || playlistsLoading || deleting || renaming || !!pendingDelete || !!pendingRename"
                 @click="openPlaylistPrompt({ kind: 'add', track: current })">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 11h10M4 16h7m6-4v8m-4-4h8" /></svg>
@@ -627,30 +636,30 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div v-if="current" class="player-details">
-            <span class="player-artist" :title="current.artist || '未知歌手'">{{ current.artist || '未知歌手' }}</span>
+            <span class="player-artist" :title="current.artist || t('未知歌手')">{{ current.artist || t('未知歌手') }}</span>
             <span class="player-detail-separator" aria-hidden="true">·</span>
-            <span class="player-album" :title="current.album || '未知专辑'">{{ current.album || '未知专辑' }}</span>
+            <span class="player-album" :title="current.album || t('未知专辑')">{{ current.album || t('未知专辑') }}</span>
           </div>
-          <span v-else class="player-artist">从曲库选择一首歌</span>
-          <span v-if="current" class="player-state" :class="{ 'visually-hidden': !buffering }" role="status">{{ buffering ? '正在加载…' : playing ? '正在播放' : '已暂停' }}</span>
+          <span v-else class="player-artist">{{ t('从曲库选择一首歌') }}</span>
+          <span v-if="current" class="player-state" :class="{ 'visually-hidden': !buffering }" role="status">{{ buffering ? t('正在加载…') : playing ? t('正在播放') : t('已暂停') }}</span>
         </div>
       </div>
       <PlayerControls :track-id="current?.id" :playing="playing" :time="playbackTime" :duration="duration" :can-previous="canPrevious" :can-next="canNext" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo" />
       <div class="player-settings">
         <PlaybackModeButton v-model:mode="playbackMode" />
-        <button class="queue-toggle" type="button" aria-label="播放队列" title="播放队列" aria-haspopup="dialog" :aria-expanded="queueOpen" aria-controls="playback-queue" @click="queueOpen = true">
+        <button class="queue-toggle" type="button" :aria-label="t('播放队列')" :title="t('播放队列')" aria-haspopup="dialog" :aria-expanded="queueOpen" aria-controls="playback-queue" @click="queueOpen = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h9M4 20h9m5-5 4 3-4 3z" /></svg>
           <span v-if="hasQueuedTracks" class="queue-count">{{ queuedTracks.length }}</span>
         </button>
         <VolumeControls :volume="volume" :muted="muted" @volume="setVolume" @mute="toggleMute" />
       </div>
-      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="!!current && playbackMode === 'repeat-one' && !hasQueuedTracks && (currentIndex >= 0 || manualActive)" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">你的浏览器不支持音频播放。</audio>
-      <p v-if="playerError" class="player-error" role="alert">{{ playerError }} <button v-if="current" @click="select(current)">重试播放</button></p>
+      <audio ref="audio" hidden preload="metadata" :src="current?.audioUrl" :loop="!!current && playbackMode === 'repeat-one' && !hasQueuedTracks && (currentIndex >= 0 || manualActive)" @playing="playing = true; buffering = false" @pause="playing = false; buffering = false; updateTime(true)" @timeupdate="updateTime()" @loadedmetadata="updateMetadata" @durationchange="updateMetadata" @emptied="playbackTime = 0; duration = 0" @volumechange="syncVolume" @waiting="buffering = true" @canplay="buffering = false" @ended="ended" @error="audioFailed">{{ t('你的浏览器不支持音频播放。') }}</audio>
+      <p v-if="playerError" class="player-error" role="alert">{{ text(playerError) }} <button v-if="current" @click="select(current)">{{ t('重试播放') }}</button></p>
     </footer>
     <NowPlayingView :open="nowPlayingOpen" :track="current" :playing="playing" :buffering="buffering" :time="playbackTime" :duration="duration"
       :can-previous="canPrevious" :can-next="canNext" :volume="volume" :muted="muted"
       :favorite-busy="!!current && (favoriting.has(current.id) || deleting || renaming || !!pendingDelete || !!pendingRename)"
-      :player-error="playerError" :favorite-error="favoriteError" :return-label="view === 'favorites' ? '返回收藏' : selectedPlaylist ? '返回歌单' : '返回曲库'"
+      :player-error="playerError" :favorite-error="favoriteError" :return-label="view === 'favorites' ? t('返回收藏') : selectedPlaylist ? t('返回歌单') : t('返回曲库')"
       @close="nowPlayingOpen = false" @toggle="togglePlayback" @previous="adjacent(-1)" @next="adjacent(1)" @seek="seekTo"
       @favorite="current && toggleFavorite(current)" @volume="setVolume" @mute="toggleMute" @retry="current && select(current)" />
     <PlaybackQueuePanel :open="queueOpen" :current="current" :queued="queuedTracks" :upcoming="sourceTracks" :source-title="queueTitle" :mode="playbackMode"

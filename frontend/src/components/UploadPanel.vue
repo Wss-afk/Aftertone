@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n, fromError, type MessageValue } from '../i18n'
 import { computed, ref } from 'vue'
 import { uploadTrack, type Track } from '../api/tracks'
+
+const { t, text } = useI18n()
 
 const props = defineProps<{ blocked?: boolean }>()
 const emit = defineEmits<{ uploaded: [track: Track]; storageChange: [] }>()
@@ -11,7 +14,7 @@ interface UploadItem {
   name: string
   file?: File
   state: UploadState
-  message?: string
+  message?: MessageValue
 }
 
 const items = ref<UploadItem[]>([])
@@ -19,7 +22,7 @@ const uploading = ref(false)
 const dragging = ref(false)
 let nextId = 0
 const queued = computed(() => items.value.filter(item => item.state === 'queued'))
-const labels = { queued: '等待导入', processing: '上传并处理…', done: '已加入曲库', duplicate: '重复，已跳过', failed: '导入失败' }
+const labels = { queued: '等待导入', processing: '上传并处理…', done: '已加入曲库', duplicate: '重复，已跳过', failed: '导入失败' } as const
 const counts = computed(() => {
   const result = { queued: 0, processing: 0, done: 0, duplicate: 0, failed: 0 }
   for (const item of items.value) result[item.state]++
@@ -78,7 +81,7 @@ async function importFiles(batch: UploadItem[]) {
       } catch (cause) {
         const code = cause instanceof Error && 'code' in cause ? cause.code : undefined
         const status = cause instanceof Error && 'status' in cause ? cause.status : undefined
-        item.message = cause instanceof Error ? cause.message : '上传失败，请重试。'
+        item.message = fromError(cause, '上传失败，请重试。')
         item.state = code === 'DUPLICATE_TRACK' ? 'duplicate' : 'failed'
         if (item.state === 'duplicate') item.file = undefined
         if (status === 507 || code === 'INSUFFICIENT_STORAGE' || code === 'STORAGE_UNAVAILABLE') break
@@ -93,37 +96,37 @@ async function importFiles(batch: UploadItem[]) {
 </script>
 
 <template>
-  <form class="upload-panel" :class="{ 'upload-dragging': dragging }" aria-label="音频导入" @submit.prevent="importFiles(queued)"
+  <form class="upload-panel" :class="{ 'upload-dragging': dragging }" :aria-label="t('音频导入')" @submit.prevent="importFiles(queued)"
     @dragover.prevent="dragOver" @dragleave="dragLeave" @drop.prevent="drop" :aria-busy="uploading">
     <div class="upload-toolbar">
-      <p id="upload-help" class="upload-help">多选或拖入音频 · 每首最大 25 MB</p>
+      <p id="upload-help" class="upload-help">{{ t('多选或拖入音频 · 每首最大 25 MB') }}</p>
       <div class="upload-actions">
         <label class="file-picker" :class="{ disabled: uploading }">
-          选择音频
+          {{ t('选择音频') }}
           <input type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus,.wma,.aif,.aiff,.webm,.weba,.mp4"
-            multiple :disabled="uploading" @change="choose" aria-label="选择音频文件" aria-describedby="upload-help" />
+            multiple :disabled="uploading" @change="choose" :aria-label="t('选择音频文件')" aria-describedby="upload-help" />
         </label>
-        <button class="primary" type="submit" :disabled="!queued.length || uploading || blocked">{{ uploading ? '正在处理…' : '上传歌曲' }}</button>
+        <button class="primary" type="submit" :disabled="!queued.length || uploading || blocked">{{ uploading ? t('正在处理…') : t('上传歌曲') }}</button>
       </div>
     </div>
-    <p v-if="blocked" class="upload-warning" role="status">磁盘空间不足，上传已暂停。可在列表下方刷新存储空间。</p>
+    <p v-if="blocked" class="upload-warning" role="status">{{ t('磁盘空间不足，上传已暂停。可在列表下方刷新存储空间。') }}</p>
     <div v-if="items.length" class="upload-queue">
       <div class="upload-queue-header">
-        <p role="status">等待 {{ counts.queued }} · 处理中 {{ counts.processing }} · 成功 {{ counts.done }} · 重复 {{ counts.duplicate }} · 失败 {{ counts.failed }}</p>
-        <button v-if="counts.done || counts.duplicate" class="text-button" type="button" :disabled="uploading" @click="clearResults">清除已处理项</button>
+        <p role="status">{{ t('等待 {queued} · 处理中 {processing} · 成功 {done} · 重复 {duplicate} · 失败 {failed}', counts) }}</p>
+        <button v-if="counts.done || counts.duplicate" class="text-button" type="button" :disabled="uploading" @click="clearResults">{{ t('清除已处理项') }}</button>
       </div>
-      <ul class="upload-queue-list" aria-label="音频导入队列">
+      <ul class="upload-queue-list" :aria-label="t('音频导入队列')">
         <li v-for="item in items" :key="item.id" :data-state="item.state">
           <div class="upload-file-info">
             <strong :title="item.name">{{ item.name }}</strong>
-            <small v-if="item.message" :class="{ error: item.state === 'failed' }">{{ item.message }}</small>
+            <small v-if="item.message" :class="{ error: item.state === 'failed' }">{{ text(item.message) }}</small>
           </div>
           <div class="upload-row-actions">
-            <span :class="{ success: item.state === 'done', error: item.state === 'failed' }">{{ labels[item.state] }}</span>
-            <button v-if="item.state === 'failed' && item.file" class="text-button" type="button" :aria-label="`重试 ${item.name}`"
-              :disabled="uploading || blocked" @click="importFiles([item])">重试</button>
-            <button v-if="item.state === 'queued' || item.state === 'failed'" class="text-button" type="button" :aria-label="`移除 ${item.name}`"
-              :disabled="uploading" @click="items = items.filter(entry => entry.id !== item.id)">移除</button>
+            <span :class="{ success: item.state === 'done', error: item.state === 'failed' }">{{ t(labels[item.state]) }}</span>
+            <button v-if="item.state === 'failed' && item.file" class="text-button" type="button" :aria-label="t('重试 {name}', { name: item.name })"
+              :disabled="uploading || blocked" @click="importFiles([item])">{{ t('重试') }}</button>
+            <button v-if="item.state === 'queued' || item.state === 'failed'" class="text-button" type="button" :aria-label="t('移除 {name}', { name: item.name })"
+              :disabled="uploading" @click="items = items.filter(entry => entry.id !== item.id)">{{ t('移除') }}</button>
           </div>
         </li>
       </ul>

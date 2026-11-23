@@ -12,7 +12,7 @@ async function request(path: string, method = 'GET', name?: string): Promise<Res
   } catch { throw new Error('无法连接歌单，请检查连接后重试。') }
   if (!response.ok) {
     const problem = await response.json().catch(() => null)
-    throw new Error(problem?.detail ?? `歌单操作失败（${response.status}），请重试。`)
+    throw Object.assign(new Error(problem?.detail ?? `歌单操作失败（${response.status}），请重试。`), { status: response.status, code: problem?.code })
   }
   return response
 }

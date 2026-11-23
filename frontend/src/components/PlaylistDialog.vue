@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { useI18n, type MessageValue } from '../i18n'
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Playlist } from '../api/playlists'
 import type { Track } from '../api/tracks'
 
+const { t, text } = useI18n()
+
 type Prompt = { kind: 'create' } | { kind: 'rename'; playlist: Playlist } | { kind: 'add'; track: Track } | { kind: 'delete'; playlist: Playlist }
-const props = defineProps<{ prompt?: Prompt; playlists: Playlist[]; busy: boolean; error: string }>()
+const props = defineProps<{ prompt?: Prompt; playlists: Playlist[]; busy: boolean; error: MessageValue }>()
 const emit = defineEmits<{ cancel: []; name: [name: string]; add: [id: number]; delete: [] }>()
 const dialog = ref<HTMLDialogElement>()
 const field = ref<HTMLInputElement | HTMLSelectElement>()
@@ -52,26 +55,26 @@ function submit() {
 <template>
   <dialog ref="dialog" class="rename-dialog playlist-dialog" aria-labelledby="playlist-dialog-title" :aria-describedby="deleting ? 'playlist-delete-description' : undefined" @cancel.prevent="cancel">
     <form v-if="prompt" @submit.prevent="submit">
-      <h2 id="playlist-dialog-title">{{ title }}</h2>
-      <p v-if="prompt.kind === 'delete'" id="playlist-delete-description">将删除「{{ prompt.playlist.name }}」及其歌曲关联。歌曲和音频文件仍保留在曲库。</p>
+      <h2 id="playlist-dialog-title">{{ text(title) }}</h2>
+      <p v-if="prompt.kind === 'delete'" id="playlist-delete-description">{{ t('将删除「{name}」及其歌曲关联。歌曲和音频文件仍保留在曲库。', { name: prompt.playlist.name }) }}</p>
       <template v-else-if="addTrack">
-        <p>把「{{ addTrack.title }}」加入歌单。</p>
-        <label v-if="playlists.length" for="playlist-choice">选择歌单</label>
+        <p>{{ t('把「{title}」加入歌单。', { title: addTrack.title }) }}</p>
+        <label v-if="playlists.length" for="playlist-choice">{{ t('选择歌单') }}</label>
         <select v-if="playlists.length" id="playlist-choice" ref="field" v-model="chosen" :disabled="busy || !canAdd">
-          <option v-if="!canAdd" :value="undefined">已加入所有歌单</option>
-          <option v-for="playlist in playlists" :key="playlist.id" :value="playlist.id" :disabled="contains(playlist)">{{ playlist.name }}{{ contains(playlist) ? '（已加入）' : '' }}</option>
+          <option v-if="!canAdd" :value="undefined">{{ t('已加入所有歌单') }}</option>
+          <option v-for="playlist in playlists" :key="playlist.id" :value="playlist.id" :disabled="contains(playlist)">{{ playlist.name }}{{ contains(playlist) ? t('（已加入）') : '' }}</option>
         </select>
-        <p v-else>请先在侧栏新建歌单。</p>
+        <p v-else>{{ t('请先在侧栏新建歌单。') }}</p>
       </template>
       <template v-else>
-        <label for="playlist-name">歌单名称</label>
+        <label for="playlist-name">{{ t('歌单名称') }}</label>
         <input id="playlist-name" ref="field" v-model="draft" type="text" autocomplete="off" :disabled="busy" :aria-invalid="attempted && invalidName" aria-describedby="playlist-feedback" />
       </template>
-      <p id="playlist-feedback" class="rename-error error" :role="feedback ? 'alert' : undefined">{{ feedback }}</p>
+      <p id="playlist-feedback" class="rename-error error" :role="feedback ? 'alert' : undefined">{{ text(feedback) }}</p>
       <div class="rename-dialog-actions">
-        <button ref="cancelButton" class="rename-cancel" type="button" :disabled="busy" @click="cancel">取消</button>
-        <button v-if="deleting" class="primary playlist-delete-confirm" type="submit" :disabled="busy">{{ busy ? '正在删除…' : '确认删除' }}</button>
-        <button v-else class="primary rename-save" type="submit" :disabled="busy || (!!addTrack && (!canAdd || chosen === undefined))">{{ busy ? '正在保存…' : addTrack ? '加入' : '保存歌单' }}</button>
+        <button ref="cancelButton" class="rename-cancel" type="button" :disabled="busy" @click="cancel">{{ t('取消') }}</button>
+        <button v-if="deleting" class="primary playlist-delete-confirm" type="submit" :disabled="busy">{{ busy ? t('正在删除…') : t('确认删除') }}</button>
+        <button v-else class="primary rename-save" type="submit" :disabled="busy || (!!addTrack && (!canAdd || chosen === undefined))">{{ busy ? t('正在保存…') : addTrack ? t('加入') : t('保存歌单') }}</button>
       </div>
     </form>
   </dialog>

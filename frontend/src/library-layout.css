@@ -36,6 +36,7 @@ main { margin-left: var(--sidebar-width); }
   padding-bottom: 26px;
   border-bottom: 1px solid var(--line);
 }
+.library-preferences { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px 20px; }
 .library-title-group { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px 22px; min-width: 0; }
 .library-heading h1 { font-size: 36px; font-weight: 600; line-height: 1.35; letter-spacing: .02em; }
 .library-count { display: flex; flex-direction: row; align-items: baseline; gap: 6px; flex-shrink: 0; white-space: nowrap; }
@@ -140,6 +141,8 @@ main { margin-left: var(--sidebar-width); }
   .track-art { width: 48px; height: 48px; }
 }
 @media (max-width: 900px) {
+  .library-heading { align-items: flex-start; flex-wrap: wrap; gap: 20px; }
+  .library-preferences { justify-content: flex-start; }
   .track-table { --track-columns: 28px 44px minmax(0, 1fr) minmax(90px, .5fr) 48px; --track-gap: 12px; }
   .track-art { width: 44px; height: 44px; }
   .track-play { display: none; }

@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useI18n, type MessageValue } from '../i18n'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import type { Track } from '../api/tracks'
 import TrackArtwork from './TrackArtwork.vue'
 
-const props = defineProps<{ track?: Track; busy: boolean; error: string }>()
+const { t, text } = useI18n()
+
+const props = defineProps<{ track?: Track; busy: boolean; error: MessageValue }>()
 const emit = defineEmits<{ save: [title: string, artist: string, album: string, cover?: File, removeCover?: boolean]; cancel: [] }>()
 const dialog = ref<HTMLDialogElement>()
 const input = ref<HTMLInputElement>()
@@ -88,29 +91,29 @@ function submit() {
 <template>
   <dialog ref="dialog" class="rename-dialog" aria-labelledby="rename-title" aria-describedby="rename-description" @cancel.prevent="cancel">
     <form v-if="track" @submit.prevent="submit">
-      <h2 id="rename-title">修改歌曲信息</h2>
-      <p id="rename-description">补充歌曲信息与封面，保存不会打断播放。</p>
+      <h2 id="rename-title">{{ t('修改歌曲信息') }}</h2>
+      <p id="rename-description">{{ t('补充歌曲信息与封面，保存不会打断播放。') }}</p>
       <div class="cover-editor">
         <TrackArtwork class="cover-preview" :url="coverPreview" />
         <div><div class="cover-buttons">
-          <label class="cover-picker">{{ coverPreview ? '更换封面' : '选择封面' }}<input type="file" accept="image/jpeg,image/png" aria-label="选择歌曲封面" :disabled="busy" @change="chooseCover" /></label>
-          <button v-if="coverPreview" class="cover-remove" type="button" :disabled="busy" @click="clearCover">移除封面</button>
-          <button v-if="cover || removeCover || coverError" class="cover-reset" type="button" :disabled="busy" @click="resetCover">撤销封面修改</button>
-        </div><p class="cover-help">JPG / PNG · 最大 5 MB<br />没有封面时使用默认图标</p><p v-if="coverError" class="cover-error error" role="alert">{{ coverError }}</p></div>
+          <label class="cover-picker">{{ coverPreview ? t('更换封面') : t('选择封面') }}<input type="file" accept="image/jpeg,image/png" :aria-label="t('选择歌曲封面')" :disabled="busy" @change="chooseCover" /></label>
+          <button v-if="coverPreview" class="cover-remove" type="button" :disabled="busy" @click="clearCover">{{ t('移除封面') }}</button>
+          <button v-if="cover || removeCover || coverError" class="cover-reset" type="button" :disabled="busy" @click="resetCover">{{ t('撤销封面修改') }}</button>
+        </div><p class="cover-help">{{ t('JPG / PNG · 最大 5 MB') }}<br />{{ t('没有封面时使用默认图标') }}</p><p v-if="coverError" class="cover-error error" role="alert">{{ text(coverError) }}</p></div>
       </div>
-      <label for="rename-input">歌名</label>
+      <label for="rename-input">{{ t('歌名') }}</label>
       <input id="rename-input" ref="input" v-model="draft" type="text" autocomplete="off" autofocus :disabled="busy" :aria-invalid="attempted && !!validation" aria-describedby="rename-count rename-feedback" />
       <p id="rename-count" class="rename-count">{{ length }} / 255</p>
-      <label for="artist-input" class="artist-label">歌手</label>
-      <input id="artist-input" v-model="artist" type="text" autocomplete="off" placeholder="填写歌手名字" :disabled="busy" :aria-invalid="attempted && !!artistValidation" aria-describedby="artist-help rename-feedback" />
-      <p id="artist-help" class="artist-help">{{ artistLength }} / 255 · 留空时显示“未知歌手”</p>
-      <label for="album-input" class="album-label">专辑</label>
-      <input id="album-input" v-model="album" type="text" autocomplete="off" placeholder="填写专辑名称" :disabled="busy" :aria-invalid="attempted && !!albumValidation" aria-describedby="album-help rename-feedback" />
-      <p id="album-help" class="album-help">{{ albumLength }} / 255 · 留空时显示“未知专辑”</p>
-      <p id="rename-feedback" class="rename-error error" :role="(attempted && (validation || artistValidation || albumValidation)) || error ? 'alert' : undefined">{{ (attempted && (validation || artistValidation || albumValidation)) || error }}</p>
+      <label for="artist-input" class="artist-label">{{ t('歌手') }}</label>
+      <input id="artist-input" v-model="artist" type="text" autocomplete="off" :placeholder="t('填写歌手名字')" :disabled="busy" :aria-invalid="attempted && !!artistValidation" aria-describedby="artist-help rename-feedback" />
+      <p id="artist-help" class="artist-help">{{ artistLength }} / 255 · {{ t('留空时显示“未知歌手”') }}</p>
+      <label for="album-input" class="album-label">{{ t('专辑') }}</label>
+      <input id="album-input" v-model="album" type="text" autocomplete="off" :placeholder="t('填写专辑名称')" :disabled="busy" :aria-invalid="attempted && !!albumValidation" aria-describedby="album-help rename-feedback" />
+      <p id="album-help" class="album-help">{{ albumLength }} / 255 · {{ t('留空时显示“未知专辑”') }}</p>
+      <p id="rename-feedback" class="rename-error error" :role="(attempted && (validation || artistValidation || albumValidation)) || error ? 'alert' : undefined">{{ text((attempted && (validation || artistValidation || albumValidation)) || error) }}</p>
       <div class="rename-dialog-actions">
-        <button class="rename-cancel" type="button" :disabled="busy" @click="cancel">取消</button>
-        <button class="primary rename-save" type="submit" :disabled="busy">{{ busy ? '正在保存…' : '保存修改' }}</button>
+        <button class="rename-cancel" type="button" :disabled="busy" @click="cancel">{{ t('取消') }}</button>
+        <button class="primary rename-save" type="submit" :disabled="busy">{{ busy ? t('正在保存…') : t('保存修改') }}</button>
       </div>
     </form>
   </dialog>

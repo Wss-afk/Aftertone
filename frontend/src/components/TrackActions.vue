@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from '../i18n'
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import type { Track } from '../api/tracks'
+
+const { t } = useI18n()
 
 const props = defineProps<{ track: Track; busy?: boolean; inPlaylist?: boolean }>()
 type Action = 'rename' | 'delete' | 'remove-from-playlist' | 'play-next'
@@ -56,17 +59,17 @@ function navigate(event: KeyboardEvent) {
 
 <template>
   <div ref="root" class="track-actions" @keydown="navigate" @focusout="event => { if (!root?.contains(event.relatedTarget as Node)) close() }">
-    <button :id="`${menuId}-trigger`" ref="trigger" class="track-more" :disabled="busy" :aria-label="`更多操作 ${track.title}`" title="更多操作" aria-haspopup="menu" :aria-expanded="expanded" :aria-controls="expanded ? menuId : undefined" @click="expanded ? close() : open()">
+    <button :id="`${menuId}-trigger`" ref="trigger" class="track-more" :disabled="busy" :aria-label="t('更多操作 {title}', { title: track.title })" :title="t('更多操作')" aria-haspopup="menu" :aria-expanded="expanded" :aria-controls="expanded ? menuId : undefined" @click="expanded ? close() : open()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
     </button>
     <div v-if="expanded" :id="menuId" class="track-menu" role="menu" :aria-labelledby="`${menuId}-trigger`">
       <button type="button" role="menuitem" data-action="rename" tabindex="-1" @click="choose('rename')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6L16 3ZM13 6l5 5" /></svg>修改信息
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6L16 3ZM13 6l5 5" /></svg>{{ t('修改信息') }}
       </button>
-      <button type="button" role="menuitem" data-action="play-next" tabindex="-1" @click="choose('play-next')">下一首播放</button>
-      <button v-if="inPlaylist" type="button" role="menuitem" data-action="remove-from-playlist" tabindex="-1" @click="choose('remove-from-playlist')">从此歌单移出</button>
+      <button type="button" role="menuitem" data-action="play-next" tabindex="-1" @click="choose('play-next')">{{ t('下一首播放') }}</button>
+      <button v-if="inPlaylist" type="button" role="menuitem" data-action="remove-from-playlist" tabindex="-1" @click="choose('remove-from-playlist')">{{ t('从此歌单移出') }}</button>
       <button type="button" role="menuitem" data-action="delete" class="menu-delete" tabindex="-1" @click="choose('delete')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>删除歌曲
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>{{ t('删除歌曲') }}
       </button>
     </div>
   </div>

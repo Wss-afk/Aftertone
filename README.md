@@ -15,6 +15,7 @@ Aftertone is a personal music library and player that runs on your computer and 
 - **Resume playback:** Reopen Aftertone in the same browser to return to the last track and position. Press Play to continue.
 - **Playback queue:** Choose Play Next from a track’s menu, then open the queue from the bottom player to reorder upcoming songs. Manually queued songs play before the rest of the original library, favorites, or playlist.
 - **Visual themes:** Choose Rainy Night or Forest Green from the theme selector in the header. Your browser remembers the choice, and you can switch while listening.
+- **Interface languages:** Switch between Simplified Chinese and English in the header. The choice is saved in your browser. Playback, searches, queues, and pending imports continue while labels and messages update.
 - **Storage protection:** See how much space your library uses and how much is free. Imports pause when the disk falls below the configured free-space threshold.
 
 ## How it works
@@ -46,7 +47,7 @@ In another PowerShell window, run:
 .\scripts\start-frontend.ps1
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173) and import some audio. The interface is currently in Simplified Chinese. The backend and frontend bind to localhost by default.
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) and import some audio. Choose Simplified Chinese or English from the language selector in the header; a fresh browser defaults to Simplified Chinese. The backend and frontend bind to localhost by default.
 
 ## Project layout
 

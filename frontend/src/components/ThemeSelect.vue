@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from '../i18n'
 import { THEMES, useTheme } from '../composables/useTheme'
+
+const { t } = useI18n()
 
 const { theme, setTheme } = useTheme()
 </script>
 
 <template>
   <div class="theme-selector">
-    <label for="app-theme">主题</label>
+    <label for="app-theme">{{ t('主题') }}</label>
     <select id="app-theme" :value="theme" @change="setTheme(($event.target as HTMLSelectElement).value)">
-      <option v-for="option in THEMES" :key="option.id" :value="option.id">{{ option.label }}</option>
+      <option v-for="option in THEMES" :key="option.id" :value="option.id">{{ t(option.label) }}</option>
     </select>
   </div>
 </template>
